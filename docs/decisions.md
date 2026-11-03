@@ -39,17 +39,21 @@ to Milestone 3 and is not a blocker.
 
 ---
 
-## OD-002 — Promoted-team Elo initialization
+## OD-002 — Initializing teams with no history
 
-**Status:** Open  
-**Question:** How should newly promoted teams or clubs with no prior Elo
-history be initialized?  
+**Status:** Decided 2026-11-03 (provisional; to be evaluated in Milestone 6)  
+**Question:** How should newly promoted teams or clubs with no prior history be initialized?  
 **Options:**
 1. League-average starting rating.
-2. Second-tier final rating with a decay factor.
+2. Second-tier final rating with a decay factor (needs second-tier data, which we don't have).
 3. Fixed starting value (e.g., 1300).
+4. Mean rating of the clubs relegated from that league the season before.
 
-**Decision:** _pending_
+**Decision:** Elo uses option 4 for promoted clubs; a club starts at the mean rating of
+the clubs it replaced, which is data-driven and needs no second-tier data. Clubs with no
+earlier league season in the data, and UCL-only clubs, start at the base rating (1500).
+The Poisson model currently shrinks all unknown clubs toward an *average* team, which is
+probably too generous to promoted clubs. This is a known limitation to measure in Milestone 6.
 
 ---
 
@@ -62,10 +66,12 @@ match, on a scheduled basis (e.g., daily), or manually?
 
 ---
 
-## OD-004 — Cross-league Elo for UCL
+## OD-004 — Cross-league strength for UCL
 
-**Status:** Open  
-**Question:** How should Elo ratings be shared or translated across domestic
-leagues for UCL simulation?  
-**Decision:** _pending_
-
+**Status:** Decided 2026-11-03 (provisional; to be evaluated in Milestone 6)  
+**Question:** How should ratings be shared or translated across domestic leagues for UCL simulation?  
+**Decision:** One shared rating pool (Elo) and one shared parameter set (Poisson) across all
+five competitions. UCL matches are the only link between leagues: 152 matches in the data
+were between clubs from two of the four leagues. 38 UCL-only clubs have no domestic data.
+Per-league offsets or an external league-strength prior can be added if backtests show the
+shared pool is miscalibrated across leagues.

@@ -51,8 +51,8 @@ Most "predictions" online are vibes with a percentage sign stuck on. Final Whist
 
 - [x] Pick a data source that covers all five competitions for 2026/27
 - [x] Project foundations
-- [x] Pull in fixtures, results and tables (4,700+ matches so far)
-- [ ] Team strength ratings and match predictions
+- [x] Pull in fixtures, results and tables (6,400+ matches so far)
+- [x] Team strength ratings and match predictions (first version, still being tested)
 - [ ] League season simulator
 - [ ] Champions League simulator (league phase, then knockouts)
 - [ ] Test predictions against past seasons
