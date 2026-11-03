@@ -731,7 +731,7 @@ Development is milestone-based. Each milestone must have a working, testable res
 
 ## 14. API design proposal
 
-Final endpoint names and payloads will be agreed after the data schema is finalized. The following is a starting proposal.
+**Implemented** (Milestone 7). The reference with response shapes and dashboard rules is `docs/api.md`. The live, field-by-field docs are at `/docs` on the running backend. Additions beyond this table: `/health/ready`, `/fixtures/{id}`, and a `preview` query parameter.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 6 complete → next is Milestone 7 (API and dashboard).**
+**Current phase: Milestone 7 (API) complete → dashboard to be built from the project owner's design.**
 
 Done so far:
 
@@ -919,7 +919,9 @@ Done so far:
 
 - Pre-Milestone 7 fixes: EPL and Bundesliga rules verified against the official 2026/27 documents (this corrected the Bundesliga's head-to-head criterion to the aggregate score); UCL simulator now conditions on the real knockout draw and results (validated by replaying the real 2025/26 knockout phase) with an optional draw file; strength uncertainty extended to the UCL (model v0.2.1).
 
-**Next action:** Milestone 7: FastAPI endpoints for the project owner's dashboard design.
+- Milestone 7 (API): read-only FastAPI v1 with competitions, standings, season forecasts (incl. UCL rounds), upcoming fixtures, fixture detail with scorelines, team pages, forecast history, model versions and backtest performance. Published-only by default, with `?preview=true` for clearly flagged unpublished runs; provenance and data freshness on every response. Publishing goes through `backend/scripts/publish_run.py` (quality gates). Reference: `docs/api.md`.
+
+**Next action:** build the dashboard from the project owner's own design (the frontend is intentionally still a shell), then Milestone 8 (deployment).
 
 ---
 

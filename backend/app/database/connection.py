@@ -25,6 +25,9 @@ class DatabaseConfigError(RuntimeError):
 
 
 def connection_kwargs() -> dict[str, Any]:
+    # Importing settings loads .env (and validates it) before we read the environment.
+    from app.core.config import settings  # noqa: F401
+
     url = os.getenv("DATABASE_URL")
     if url:
         return {"conninfo": url, "connect_timeout": 15}
@@ -49,7 +52,4 @@ def connection_kwargs() -> dict[str, Any]:
 
 
 def connect(*, autocommit: bool = True) -> psycopg.Connection[Any]:
-    # Importing settings guarantees .env has been loaded.
-    from app.core.config import settings  # noqa: F401
-
     return psycopg.connect(autocommit=autocommit, **connection_kwargs())
