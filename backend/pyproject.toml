@@ -8,6 +8,7 @@ requires-python = ">=3.12"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+# Database tests are skipped unless RUN_DB_TESTS=1 (see tests/integration).
 
 [tool.ruff]
 target-version = "py312"
@@ -19,6 +20,8 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # One-off investigation scripts: must edit sys.path before importing app; long report strings.
 "scripts/*" = ["E402", "E501"]
+# Tests contain inline data tables.
+"tests/**" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

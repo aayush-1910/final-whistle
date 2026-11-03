@@ -51,7 +51,22 @@ class Stage(StrEnum):
     QUARTER_FINALS = "quarter_finals"
     SEMI_FINALS = "semi_finals"
     FINAL = "final"
+    GROUP_STAGE = "group_stage"  # pre-2024/25 UCL format
     OTHER = "other"
+
+
+class MatchDuration(StrEnum):
+    """How far a completed match went."""
+
+    REGULAR = "regular"  # decided in 90 minutes (+ stoppage time)
+    EXTRA_TIME = "extra_time"
+    PENALTY_SHOOTOUT = "penalty_shootout"
+
+
+class Outcome(StrEnum):
+    HOME = "home"
+    DRAW = "draw"
+    AWAY = "away"
 
 
 # Statuses where a score may exist / must exist.
@@ -163,6 +178,12 @@ class Fixture:
     """One match.  Teams are referenced by canonical team ID.
 
     Scores: ``None`` means "no score" and is distinct from ``0``.
+
+    ``home_score``/``away_score`` are goals scored in play, INCLUDING extra
+    time but EXCLUDING any penalty shootout (a 1-1 won 4-3 on penalties is
+    stored as 1-1 with penalties 4-3).  ``home_score_90``/``away_score_90``
+    hold the score after regular time and are only set when the match went
+    beyond 90 minutes; use :attr:`score_90` to read it for any match.
     """
 
     season_id: int | None
@@ -171,14 +192,63 @@ class Fixture:
     kickoff_utc: datetime | None
     status: FixtureStatus
     stage: Stage = Stage.REGULAR_SEASON
+    group: str | None = None
     matchday: int | None = None
     home_score: int | None = None
     away_score: int | None = None
+    duration: MatchDuration = MatchDuration.REGULAR
+    home_score_90: int | None = None
+    away_score_90: int | None = None
+    home_penalties: int | None = None
+    away_penalties: int | None = None
     provider_status: str | None = None  # original provider status, kept for audit
     provider_ref: ProviderRef | None = None
     id: int | None = None
 
     def __post_init__(self) -> None:
+        self._validate_core()
+        self._validate_duration()
+
+    def _validate_duration(self) -> None:
+        pairs = {
+            "90-minute score": (self.home_score_90, self.away_score_90),
+            "penalties": (self.home_penalties, self.away_penalties),
+        }
+        for name, (h, a) in pairs.items():
+            if (h is None) != (a is None):
+                raise DomainValidationError(f"Fixture must have both {name} values or neither")
+            if h is not None and (h < 0 or a < 0):  # type: ignore[operator]
+                raise DomainValidationError(f"{name} must be non-negative")
+
+        has_90 = self.home_score_90 is not None
+        has_pens = self.home_penalties is not None
+
+        if self.duration is MatchDuration.REGULAR:
+            if has_90 or has_pens:
+                raise DomainValidationError(
+                    "A match decided in regular time has no separate 90-minute score or penalties"
+                )
+            return
+
+        if self.home_score is None:
+            raise DomainValidationError(f"A {self.duration} match must have a score")
+        if not has_90:
+            raise DomainValidationError(f"A {self.duration} match needs its 90-minute score")
+        if self.home_score_90 > self.home_score or self.away_score_90 > self.away_score:  # type: ignore[operator]
+            raise DomainValidationError("90-minute score cannot exceed the final score")
+
+        if self.duration is MatchDuration.PENALTY_SHOOTOUT:
+            if not has_pens:
+                raise DomainValidationError("A shootout match needs penalty scores")
+            if self.home_penalties == self.away_penalties:
+                raise DomainValidationError("A penalty shootout cannot end level")
+            # NB: the match itself need not be level — in a two-legged tie the
+            # shootout settles a level AGGREGATE (e.g. 2nd leg 1-0 after a 0-1
+            # first leg).  Aggregate checks belong to the knockout-tie logic.
+        elif has_pens:
+            raise DomainValidationError("Only a penalty-shootout match can have penalty scores")
+
+    def _validate_core(self) -> None:
         if self.home_team_id == self.away_team_id:
             raise DomainValidationError(
                 f"Fixture has the same team ({self.home_team_id}) at home and away"
@@ -210,6 +280,43 @@ class Fixture:
     @property
     def has_valid_score(self) -> bool:
         return self.is_completed and self.home_score is not None
+
+    @property
+    def score_90(self) -> tuple[int, int] | None:
+        """Score after regular time — the input for goal models."""
+        if self.home_score_90 is not None and self.away_score_90 is not None:
+            return (self.home_score_90, self.away_score_90)
+        if self.home_score is not None and self.away_score is not None:
+            return (self.home_score, self.away_score)
+        return None
+
+    @property
+    def outcome_90(self) -> Outcome | None:
+        """Result after 90 minutes (what league tables and 1X2 forecasts use)."""
+        s = self.score_90
+        if s is None or not self.is_completed:
+            return None
+        return Outcome.HOME if s[0] > s[1] else Outcome.AWAY if s[1] > s[0] else Outcome.DRAW
+
+    @property
+    def winner_team_id(self) -> int | None:
+        """Team that scored more goals in this match (incl. extra time); None if level.
+
+        Penalties are NOT included: in a two-legged tie the shootout decides the
+        tie, not the match.  See :attr:`shootout_winner_team_id`.
+        """
+        if not self.is_completed or self.home_score is None or self.away_score is None:
+            return None
+        if self.home_score == self.away_score:
+            return None
+        return self.home_team_id if self.home_score > self.away_score else self.away_team_id
+
+    @property
+    def shootout_winner_team_id(self) -> int | None:
+        """Winner of the penalty shootout, if one took place."""
+        if self.home_penalties is None or self.away_penalties is None:
+            return None
+        return self.home_team_id if self.home_penalties > self.away_penalties else self.away_team_id
 
 
 @dataclass(frozen=True)
@@ -341,6 +448,8 @@ __all__ = [
     "Fixture",
     "FixtureStatus",
     "LeagueRules",
+    "MatchDuration",
+    "Outcome",
     "ProviderRef",
     "Season",
     "Stage",

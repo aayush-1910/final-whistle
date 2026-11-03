@@ -13,6 +13,8 @@ from app.domain.models import (
     Fixture,
     FixtureStatus,
     LeagueRules,
+    MatchDuration,
+    Outcome,
     ProviderRef,
     Season,
     StandingRow,
@@ -202,3 +204,122 @@ class TestLeagueRules:
     def test_invalid_zone_range(self) -> None:
         with pytest.raises(DomainValidationError):
             Zone("x", "X", 5, 2)
+
+
+# ---------------------------------------------------------------------------
+# Extra time and penalties
+# ---------------------------------------------------------------------------
+FIN = FixtureStatus.FINISHED
+
+
+class TestDurations:
+    def test_regular_match_derived_fields(self) -> None:
+        f = fixture(status=FIN, home_score=2, away_score=2)
+        assert f.score_90 == (2, 2)
+        assert f.outcome_90 is Outcome.DRAW
+        assert f.winner_team_id is None
+
+    def test_shootout_match(self) -> None:
+        # 2025/26 UCL final shape: 1-1 after 90, 0-0 in ET, 4-3 on penalties.
+        f = fixture(
+            status=FIN,
+            home_score=1,
+            away_score=1,
+            duration=MatchDuration.PENALTY_SHOOTOUT,
+            home_score_90=1,
+            away_score_90=1,
+            home_penalties=4,
+            away_penalties=3,
+        )
+        assert f.outcome_90 is Outcome.DRAW
+        assert f.winner_team_id is None  # match drawn...
+        assert f.shootout_winner_team_id == 10  # ...shootout won by home side
+
+    def test_second_leg_shootout_need_not_be_level(self) -> None:
+        # Real case (UCL 2023/24 R16): Arsenal 1-0 Porto after a 0-1 first leg,
+        # Arsenal won 4-2 on penalties.
+        f = fixture(
+            status=FIN,
+            home_score=1,
+            away_score=0,
+            duration=MatchDuration.PENALTY_SHOOTOUT,
+            home_score_90=1,
+            away_score_90=0,
+            home_penalties=4,
+            away_penalties=2,
+        )
+        assert f.winner_team_id == 10 and f.shootout_winner_team_id == 10
+
+    def test_extra_time_winner(self) -> None:
+        f = fixture(
+            status=FIN,
+            home_score=1,
+            away_score=2,
+            duration=MatchDuration.EXTRA_TIME,
+            home_score_90=1,
+            away_score_90=1,
+        )
+        assert f.score_90 == (1, 1) and f.outcome_90 is Outcome.DRAW
+        assert f.winner_team_id == 20
+
+    def test_second_leg_extra_time_need_not_be_level_at_90(self) -> None:
+        # Two-legged tie: 3-0 at 90 levels the aggregate, ET goes 0-2.
+        f = fixture(
+            status=FIN,
+            home_score=3,
+            away_score=2,
+            duration=MatchDuration.EXTRA_TIME,
+            home_score_90=3,
+            away_score_90=0,
+        )
+        assert f.score_90 == (3, 0)
+
+    def test_regular_match_cannot_have_penalties(self) -> None:
+        with pytest.raises(DomainValidationError):
+            fixture(status=FIN, home_score=1, away_score=1, home_penalties=4, away_penalties=3)
+
+    def test_shootout_cannot_end_level(self) -> None:
+        with pytest.raises(DomainValidationError, match="cannot end level"):
+            fixture(
+                status=FIN,
+                home_score=1,
+                away_score=1,
+                duration=MatchDuration.PENALTY_SHOOTOUT,
+                home_score_90=1,
+                away_score_90=1,
+                home_penalties=3,
+                away_penalties=3,
+            )
+
+    def test_extra_time_requires_90_score(self) -> None:
+        with pytest.raises(DomainValidationError, match="90-minute score"):
+            fixture(status=FIN, home_score=2, away_score=1, duration=MatchDuration.EXTRA_TIME)
+
+    def test_90_score_cannot_exceed_final(self) -> None:
+        with pytest.raises(DomainValidationError, match="exceed"):
+            fixture(
+                status=FIN,
+                home_score=1,
+                away_score=1,
+                duration=MatchDuration.EXTRA_TIME,
+                home_score_90=2,
+                away_score_90=1,
+            )
+
+    def test_extra_time_cannot_have_penalties(self) -> None:
+        with pytest.raises(DomainValidationError, match="Only a penalty"):
+            fixture(
+                status=FIN,
+                home_score=2,
+                away_score=1,
+                duration=MatchDuration.EXTRA_TIME,
+                home_score_90=1,
+                away_score_90=1,
+                home_penalties=4,
+                away_penalties=3,
+            )
+
+    def test_unplayed_match_has_no_outcome(self) -> None:
+        f = fixture()
+        assert f.score_90 is None and f.outcome_90 is None and f.winner_team_id is None
+        assert f.shootout_winner_team_id is None

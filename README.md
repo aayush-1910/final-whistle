@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 1 complete → next is Milestone 2 (data ingestion).**
+**Current phase: Milestone 2 complete → next is Milestone 3 (historical data and baseline models).**
 
 Done so far:
 
@@ -907,8 +907,9 @@ Done so far:
 - API-Football Free: **no 2026/27 access**, history 2022–2024 only. See `docs/milestone-0-coverage-report.md`.
 - **Primary provider: football-data.org (free tier).** It fully covers all five competitions for 2026/27, and history is available for 2023–2025. See `docs/milestone-0-football-data-org-report.md` and `docs/decisions.md` OD-001.
 - Milestone 1: Git repo, backend virtualenv, lint/format/type/test tooling, validated domain contracts (`backend/app/domain/models.py`, documented in `docs/data-dictionary.md`), and a React + Vite + Tailwind frontend shell connected to the backend.
+- Milestone 2: Supabase schema with migrations and row-level security (`backend/migrations/`); a normalizer that handles extra time and shootouts correctly; idempotent, audited ingestion; and a standings cross-check. **4,771 matches across 20 competition-seasons (2023/24–2026/27) are imported and validated.** See `docs/architecture.md` and `docs/known-data-issues.md`.
 
-**Next action:** Milestone 2 — ingest fixtures, results and standings from football-data.org into the domain models, then design the database schema.
+**Next action:** Milestone 3: chronological Elo ratings and a Poisson goal model, with tests.
 
 ---
 

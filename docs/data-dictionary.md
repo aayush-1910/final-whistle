@@ -1,8 +1,8 @@
 # Data Dictionary
 
 > Canonical domain contracts for Final Whistle. Source: `backend/app/domain/models.py`.
-> The database schema (Milestone 2) will be derived from these. Every class
-> validates itself on construction and raises `DomainValidationError` on bad data.
+> Every class validates itself on construction and raises `DomainValidationError` on bad data.
+> The database schema mirrors these: `backend/migrations/0001_initial_schema.sql`.
 
 ## Conventions
 
@@ -45,9 +45,13 @@
 | `home_team_id`, `away_team_id` | int | Must differ |
 | `kickoff_utc` | datetime \| None | Aware → UTC; `None` = kickoff time not yet known |
 | `status` | `FixtureStatus` | See below |
-| `stage` | `Stage` | `regular_season`, `league_stage`, `playoffs`, `last_16`, `quarter_finals`, `semi_finals`, `final`, `other` |
-| `matchday` | int \| None | ≥ 1 |
-| `home_score`, `away_score` | int \| None | Both or neither; non-negative |
+| `stage` | `Stage` | `regular_season`, `league_stage`, `group_stage` (pre-2024/25 UCL), `playoffs`, `last_16`, `quarter_finals`, `semi_finals`, `final`, `other` |
+| `group` | str \| None | e.g. `GROUP_A` (pre-2024/25 UCL) |
+| `matchday` | int \| None | ≥ 1; `None` for a single-match final |
+| `home_score`, `away_score` | int \| None | Goals in play **including extra time, excluding any shootout**. Both or neither; non-negative |
+| `duration` | `MatchDuration` | `regular`, `extra_time`, `penalty_shootout` |
+| `home_score_90`, `away_score_90` | int \| None | Score after 90 minutes; set only when the match went beyond 90. Read via `score_90` |
+| `home_penalties`, `away_penalties` | int \| None | Shootout score; only with `penalty_shootout`. A second leg's own score need not be level (the shootout settles the aggregate) |
 | `provider_status` | str \| None | Original provider status, kept for audit |
 | `provider_ref` | ProviderRef \| None | |
 
@@ -91,3 +95,28 @@ verified against official competition regulations.
 | `CANCELLED` | `cancelled` |
 | `AWARDED` | `awarded` |
 | anything else | `unknown` (logged) |
+
+## Derived fixture properties
+
+| Property | Meaning |
+|---|---|
+| `score_90` | Score after regular time; the input for goal models |
+| `outcome_90` | home / draw / away after 90 minutes; used for league tables and 1X2 forecasts |
+| `winner_team_id` | More goals in this match incl. extra time; `None` if level. Ignores penalties |
+| `shootout_winner_team_id` | Winner of the shootout, if there was one |
+
+## Database tables (migration 0001)
+
+| Table | Purpose |
+|---|---|
+| `competitions`, `competition_provider_ids` | The 5 competitions (seeded by 0002) and provider codes |
+| `seasons` | One row per competition-season; unique `(competition_id, start_year)` |
+| `teams`, `team_provider_ids` | Canonical teams; one provider ID per provider, shared across competitions (e.g. Arsenal in EPL and UCL is one team) |
+| `season_teams` | Participants of each season |
+| `fixtures` | Matches; unique `(provider, provider_fixture_id)`; DB-level checks mirror the domain rules |
+| `standings_snapshots`, `standings_rows` | Provider tables captured on each ingestion, for cross-checking |
+| `ingestion_runs` | Audit trail: status, request count, inserted/updated counts, issues, consistency result, error |
+| `schema_migrations` | Applied migrations with checksums |
+
+Row-level security is enabled on every table with no policies, so Supabase's public REST roles
+cannot read or write them. The backend connects as the table owner.
