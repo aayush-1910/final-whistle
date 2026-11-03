@@ -28,6 +28,13 @@ from app.simulations.rules import load_rules
 
 LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A"]
 MODEL_NAME, MODEL_VERSION = "poisson-montecarlo", "0.1.0"
+SHORT = {
+    "champions_league": "UCL",
+    "europa_league": "UEL",
+    "conference_league": "UECL",
+    "relegation_playoff": "Rel PO",
+    "relegation": "Relegated",
+}
 
 
 def main() -> None:
@@ -62,7 +69,7 @@ def main() -> None:
                   f"({f.completed_matches} played, {len(f.matches)} to simulate, "
                   f"{time.time() - t0:.1f}s) ---")  # fmt: skip
             header = f"{'':3}{'Team':18}{'Pts':>4}{'xPts':>6}{'xPos':>6}{'Title':>7}"
-            print(header + "".join(f"{z[:10]:>11}" for z in zones))
+            print(header + "".join(f"{SHORT.get(z, z[:10]):>11}" for z in zones))
             for i, t in enumerate(sorted(f.team_ids, key=lambda x: exp_pos[x]), start=1):
                 row = (f"{i:<3}{names[t][:17]:18}{f.current_points[t]:>4}"
                        f"{f.expected_points[t]:>6.1f}{exp_pos[t]:>6.1f}{f.title_probs[t]:>7.1%}")  # fmt: skip
