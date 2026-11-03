@@ -5,6 +5,11 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: { manualChunks: { charts: ['recharts'] } },
+    },
+  },
   server: {
     // Forward API calls to the local FastAPI backend. The browser only ever
     // talks to this dev server, so no provider keys or CORS setup reach it.

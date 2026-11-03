@@ -36,6 +36,7 @@ def _team(row: dict[str, Any], prefix: str = "") -> s.TeamRef:
     return s.TeamRef(
         id=row[f"{prefix}id"], name=row[f"{prefix}name"],
         short_name=row[f"{prefix}short_name"], tla=row[f"{prefix}tla"],
+        crest_url=row.get(f"{prefix}crest_url"),
     )  # fmt: skip
 
 
@@ -98,12 +99,13 @@ def _run_info(row: dict[str, Any], code: str, year: int) -> s.RunInfo:
         data_cutoff=row["data_cutoff"], run_at=row["run_at"],
         simulation_count=row["simulation_count"], seed=row["seed"],
         code_version=row["code_version"], is_published=row["is_published"],
+        is_backfill=bool(row.get("is_backfill")),
         rules_source_quality=_rules_quality(code, year), notes=list(row["notes"] or []),
     )  # fmt: skip
 
 
 _RUN_FIELDS = ("id", "model_name", "model_version", "data_cutoff", "run_at", "simulation_count",
-               "seed", "code_version", "is_published", "notes")  # fmt: skip
+               "seed", "code_version", "is_published", "notes", "is_backfill")  # fmt: skip
 _RUN_COLS = ", ".join(f"r.{c}" for c in _RUN_FIELDS)
 
 
@@ -112,7 +114,7 @@ def latest_run(conn: Conn, season: int, *, preview: bool) -> dict[str, Any] | No
         conn,
         f"""select {_RUN_COLS} from model_runs r
              where r.season_id = %s and r.status = 'completed' and (r.is_published or %s)
-             order by r.run_at desc, r.id desc limit 1""",
+             order by r.data_cutoff desc, r.run_at desc, r.id desc limit 1""",
         (season, preview),
     )
 
@@ -131,7 +133,8 @@ def list_competitions(conn: Conn, now: datetime | None = None) -> list[s.Competi
     now = now or datetime.now(tz=UTC)
     rows = _rows(
         conn,
-        f"""select c.code, c.name, c.format, c.country, se.start_year, ir.finished_at, ir.status,
+        f"""select c.code, c.name, c.format, c.country, c.emblem_url, se.start_year,
+                   ir.finished_at, ir.status,
                    (pr.id is not null) as has_preview, pr.is_published as preview_is_published,
                    {", ".join(f"r.{col} as pub_{col}" for col in _RUN_FIELDS)}
               from competitions c
@@ -142,10 +145,12 @@ def list_competitions(conn: Conn, now: datetime | None = None) -> list[s.Competi
                                   order by finished_at desc nulls last limit 1) ir on true
               left join lateral (select * from model_runs where season_id = se.id
                                     and status = 'completed' and is_published
-                                  order by run_at desc, id desc limit 1) r on true
+                                  order by data_cutoff desc, run_at desc, id desc limit 1)
+                   r on true
               left join lateral (select id, is_published from model_runs where season_id = se.id
                                     and status = 'completed'
-                                  order by run_at desc, id desc limit 1) pr on true
+                                  order by data_cutoff desc, run_at desc, id desc limit 1)
+                   pr on true
              order by c.id""",
     )
     out = []
@@ -155,6 +160,7 @@ def list_competitions(conn: Conn, now: datetime | None = None) -> list[s.Competi
         out.append(
             s.CompetitionSummary(
                 code=row["code"], name=row["name"], format=row["format"], country=row["country"],
+                emblem_url=row["emblem_url"],
                 current_season=year, season_label=season_label(year) if year else None,
                 freshness=_freshness(row["finished_at"], row["status"], now),
                 latest_published_run=_run_info(run, row["code"], year) if run and year else None,
@@ -182,6 +188,7 @@ def _tables(conn: Conn, season_ids: list[int]) -> dict[int, list[s.StandingRow]]
         conn,
         """select f.season_id, c.code, se.start_year, f.status, f.home_score, f.away_score,
                   h.id as h_id, h.name as h_name, h.short_name as h_short_name, h.tla as h_tla,
+                  h.crest_url as h_crest_url, a.crest_url as a_crest_url,
                   a.id as a_id, a.name as a_name, a.short_name as a_short_name, a.tla as a_tla
              from fixtures f
              join seasons se on se.id = f.season_id
@@ -268,7 +275,8 @@ def standings(conn: Conn, code: str, year: int) -> s.StandingsResponse:
 def _team_forecasts(conn: Conn, run_id: int, ucl: bool) -> list[s.TeamForecast]:
     rows = _rows(
         conn,
-        """select t.id, t.name, t.short_name, t.tla, f.current_points, f.played, f.expected_points,
+        """select t.id, t.name, t.short_name, t.tla, t.crest_url, f.current_points, f.played,
+                  f.expected_points,
                   f.expected_position, f.position_probs, f.zone_probs, f.round_probs
              from season_forecasts f join teams t on t.id = f.team_id
             where f.model_run_id = %s""",
@@ -343,7 +351,7 @@ def team_forecast_history(
                   f.expected_position, f.expected_points, f.zone_probs, f.round_probs
              from season_forecasts f join model_runs r on r.id = f.model_run_id
             where f.team_id = %s and r.season_id = %s and (r.is_published or %s)
-            order by r.run_at""",
+            order by r.data_cutoff, r.run_at""",
         (team_id, sid, preview),
     )
     return s.TeamForecastHistory(
@@ -360,6 +368,163 @@ def team_forecast_history(
     )  # fmt: skip
 
 
+def _completed_matchdays(conn: Conn, sid: int, cutoffs: list[datetime]) -> list[int]:
+    """For each cutoff: how many matchdays were (essentially) complete.
+
+    A matchday counts once 80% of its fixtures kicked off before the cutoff, so one
+    postponed match does not hold the label back for weeks.
+    """
+    rows = _rows(
+        conn,
+        """select f.matchday, f.kickoff_utc from fixtures f
+             join seasons se on se.id = f.season_id join competitions c on c.id = se.competition_id
+            where f.season_id = %s and f.matchday is not null and f.kickoff_utc is not null
+              and f.stage = case when c.code = 'UCL' then 'league_stage'
+                                 else 'regular_season' end""",
+        (sid,),
+    )
+    by_md: dict[int, list[datetime]] = defaultdict(list)
+    for r in rows:
+        by_md[r["matchday"]].append(r["kickoff_utc"])
+    out = []
+    for cut in cutoffs:
+        done = 0
+        for md in sorted(by_md):
+            ks = by_md[md]
+            if sum(k < cut for k in ks) >= 0.8 * len(ks):
+                done = md
+            else:
+                break
+        out.append(done)
+    return out
+
+
+def season_timeline(conn: Conn, code: str, year: int, *, preview: bool) -> s.TimelineResponse:
+    """Title (UCL: trophy) probability per matchday: the latest run for each matchday."""
+    c = competition(conn, code)
+    sid = season_id(conn, c["id"], year)
+    runs = _rows(
+        conn,
+        """select id, data_cutoff, is_published, is_backfill from model_runs
+            where season_id = %s and status = 'completed' and (is_published or %s)
+            order by data_cutoff, run_at, id""",
+        (sid, preview),
+    )
+    if not runs:
+        raise NotFoundError(
+            "No published forecast for this season yet"
+            + ("" if preview else " (use ?preview=true to include unpublished runs)")
+        )
+    mds = _completed_matchdays(conn, sid, [r["data_cutoff"] for r in runs])
+    latest_per_md: dict[int, dict[str, Any]] = {}
+    for r, md in zip(runs, mds, strict=True):
+        latest_per_md[md] = r | {"matchday": md}  # later cutoff / run wins
+    chosen = [latest_per_md[m] for m in sorted(latest_per_md)]
+    rows = _rows(
+        conn,
+        """select f.model_run_id, f.team_id, f.zone_probs, f.round_probs, f.expected_points,
+                  t.id, t.name, t.short_name, t.tla, t.crest_url
+             from season_forecasts f join teams t on t.id = f.team_id
+            where f.model_run_id = any(%s)""",
+        ([r["id"] for r in chosen],),
+    )
+    ucl = code == "UCL"
+    probs: dict[int, dict[int, float]] = defaultdict(dict)
+    xpts: dict[int, dict[int, float]] = defaultdict(dict)
+    teams: dict[int, s.TeamRef] = {}
+    for r in rows:
+        p = (
+            (r["round_probs"] or {}).get("winner", 0.0)
+            if ucl
+            else r["zone_probs"].get("champion", 0.0)
+        )
+        probs[r["model_run_id"]][r["team_id"]] = float(p)
+        xpts[r["model_run_id"]][r["team_id"]] = float(r["expected_points"])
+        teams[r["team_id"]] = _team(r)
+    return s.TimelineResponse(
+        competition=code, season=year, metric="winner" if ucl else "champion",
+        teams=sorted(teams.values(), key=lambda t: t.name),
+        points=[
+            s.TimelinePoint(run_id=r["id"], data_cutoff=r["data_cutoff"], matchday=r["matchday"],
+                            is_published=r["is_published"], is_backfill=r["is_backfill"],
+                            probs=probs[r["id"]], expected_points=xpts[r["id"]])
+            for r in chosen
+        ],
+    )  # fmt: skip
+
+
+# ---------------------------------------------------------------------------
+# Data status (Data Centre)
+# ---------------------------------------------------------------------------
+def data_status(
+    conn: Conn, *, limit: int = 20, now: datetime | None = None
+) -> s.DataStatusResponse:
+    now = now or datetime.now(tz=UTC)
+    comps = _rows(
+        conn,
+        """select c.code, c.name, se.start_year, ir.finished_at, ir.status,
+                  coalesce(fx.total, 0) as total, coalesce(fx.played, 0) as played,
+                  coalesce(fx.remaining, 0) as remaining,
+                  lr.id as run_id, lr.data_cutoff, lr.is_published,
+                  coalesce(rc.total, 0) as runs_total, coalesce(rc.published, 0) as runs_published
+             from competitions c
+             left join lateral (select id, start_year from seasons where competition_id = c.id
+                                 order by start_year desc limit 1) se on true
+             left join lateral (select finished_at, status from ingestion_runs
+                                 where competition_id = c.id and status in ('succeeded', 'partial')
+                                 order by finished_at desc nulls last limit 1) ir on true
+             left join lateral (select count(*) as total,
+                                       count(*) filter (where status in ('finished', 'awarded'))
+                                           as played,
+                                       count(*) filter (where status in ('scheduled', 'postponed'))
+                                           as remaining
+                                  from fixtures where season_id = se.id) fx on true
+             left join lateral (select id, data_cutoff, is_published from model_runs
+                                 where season_id = se.id and status = 'completed'
+                                 order by data_cutoff desc, run_at desc, id desc limit 1) lr on true
+             left join lateral (select count(*) as total,
+                                       count(*) filter (where is_published) as published
+                                  from model_runs where season_id = se.id) rc on true
+            order by c.id""",
+    )
+    runs = _rows(
+        conn,
+        """select i.id, c.code, se.start_year, i.started_at, i.finished_at, i.status,
+                  i.request_count,
+                  i.fixtures_inserted, i.fixtures_updated, jsonb_array_length(i.issues) as issues,
+                  (i.consistency ->> 'ok')::boolean as consistency_ok, i.error
+             from ingestion_runs i
+             left join competitions c on c.id = i.competition_id
+             left join seasons se on se.id = i.season_id
+            order by i.started_at desc, i.id desc limit %s""",
+        (limit,),
+    )
+    return s.DataStatusResponse(
+        competitions=[
+            s.CompetitionDataStatus(
+                code=r["code"], name=r["name"], season=r["start_year"],
+                fixtures_total=r["total"], fixtures_played=r["played"],
+                fixtures_remaining=r["remaining"],
+                freshness=_freshness(r["finished_at"], r["status"], now),
+                latest_run_id=r["run_id"], latest_run_cutoff=r["data_cutoff"],
+                latest_run_published=r["is_published"], runs_total=r["runs_total"],
+                runs_published=r["runs_published"],
+            )
+            for r in comps
+        ],
+        recent_ingestions=[
+            s.IngestionRunOut(
+                id=r["id"], competition=r["code"], season=r["start_year"],
+                started_at=r["started_at"], finished_at=r["finished_at"], status=r["status"],
+                request_count=r["request_count"], fixtures_inserted=r["fixtures_inserted"],
+                fixtures_updated=r["fixtures_updated"], issues=r["issues"] or 0,
+                consistency_ok=r["consistency_ok"], error=r["error"],
+            )
+            for r in runs
+        ],
+    )  # fmt: skip
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -367,6 +532,7 @@ _FIXTURE_SELECT = """
     select f.id, c.code, se.start_year, f.stage, f.matchday, f.kickoff_utc, f.status,
            f.home_score, f.away_score, f.duration, f.home_penalties, f.away_penalties,
            h.id as h_id, h.name as h_name, h.short_name as h_short_name, h.tla as h_tla,
+                  h.crest_url as h_crest_url, a.crest_url as a_crest_url,
            a.id as a_id, a.name as a_name, a.short_name as a_short_name, a.tla as a_tla,
            mf.p_home, mf.p_draw, mf.p_away, mf.xg_home, mf.xg_away,
            mr.id as run_id, mr.model_version, mr.data_cutoff, mr.is_published
@@ -381,7 +547,7 @@ _FIXTURE_SELECT = """
                and (r.is_published or %(preview)s)
                and exists (select 1 from match_forecasts m
                             where m.model_run_id = r.id and m.fixture_id = f.id)
-             order by r.run_at desc, r.id desc limit 1) mr on true
+             order by r.data_cutoff desc, r.run_at desc, r.id desc limit 1) mr on true
       left join match_forecasts mf on mf.model_run_id = mr.id and mf.fixture_id = f.id
 """
 
@@ -441,7 +607,9 @@ def fixture_detail(conn: Conn, fixture_id: int, *, preview: bool) -> s.FixtureDe
 # Teams
 # ---------------------------------------------------------------------------
 def team_ref(conn: Conn, team_id: int) -> s.TeamRef:
-    r = _one(conn, "select id, name, short_name, tla from teams where id = %s", (team_id,))
+    r = _one(
+        conn, "select id, name, short_name, tla, crest_url from teams where id = %s", (team_id,)
+    )
     if r is None:
         raise NotFoundError(f"No team {team_id}")
     return _team(r)
@@ -451,7 +619,11 @@ def team_detail(
     conn: Conn, team_id: int, *, preview: bool, now: datetime | None = None
 ) -> s.TeamDetail:
     now = now or datetime.now(tz=UTC)
-    t = _one(conn, "select id, name, short_name, tla, country from teams where id = %s", (team_id,))
+    t = _one(
+        conn,
+        "select id, name, short_name, tla, crest_url, country from teams where id = %s",
+        (team_id,),
+    )
     if t is None:
         raise NotFoundError(f"No team {team_id}")
     memberships = _rows(

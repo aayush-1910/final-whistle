@@ -57,7 +57,7 @@ Most "predictions" online are vibes with a percentage sign stuck on. Final Whist
 - [x] Champions League simulator (league phase, then knockouts, built from UEFA's official rules)
 - [x] Test predictions against past seasons (they beat simple baselines; full report in `docs/backtest-report.md`)
 - [x] Data API for the dashboard
-- [ ] The dashboard 🎨
+- [x] The dashboard 🎨
 - [ ] Go live 🚀
 
 ## 🔧 Under the hood

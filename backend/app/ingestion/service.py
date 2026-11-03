@@ -114,6 +114,9 @@ def ingest_season(
 
         with conn.transaction():
             season_id = repo.upsert_season(conn, competition_id, season)
+            repo.set_competition_emblem(
+                conn, competition_id, (teams_raw.get("competition") or {}).get("emblem")
+            )
             team_ids = repo.upsert_teams(conn, _collect_teams(teams_raw, matches_raw),
                                          PROVIDER_NAME)  # fmt: skip
             repo.link_season_teams(

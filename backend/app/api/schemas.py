@@ -24,6 +24,7 @@ class TeamRef(BaseModel):
     name: str
     short_name: str | None = None
     tla: str | None = None
+    crest_url: str | None = Field(default=None, description="Club crest image (provider URL)")
 
 
 class Freshness(BaseModel):
@@ -45,6 +46,10 @@ class RunInfo(BaseModel):
     seed: int
     code_version: str | None
     is_published: bool = Field(description="False = preview of an unpublished run")
+    is_backfill: bool = Field(
+        default=False,
+        description="Historical run: computed later, using only data before data_cutoff",
+    )
     rules_source_quality: str | None = Field(description="primary / secondary")
     notes: list[str]
 
@@ -60,6 +65,7 @@ class CompetitionSummary(BaseModel):
     name: str
     format: str
     country: str | None
+    emblem_url: str | None = None
     current_season: int | None
     season_label: str | None
     freshness: Freshness
@@ -227,6 +233,59 @@ class PerformanceResponse(BaseModel):
     match_level: BacktestOut | None
     season_level: BacktestOut | None
     report: str = "docs/backtest-report.md"
+
+
+class TimelinePoint(BaseModel):
+    run_id: int
+    data_cutoff: datetime
+    matchday: int = Field(description="Matchdays completed at the data cutoff (0 = pre-season)")
+    is_published: bool
+    is_backfill: bool
+    probs: dict[int, float] = Field(description="team id -> probability of the metric")
+    expected_points: dict[int, float]
+
+
+class TimelineResponse(BaseModel):
+    competition: str
+    season: int
+    metric: str = Field(description="champion (leagues) or winner (UCL: lifts the trophy)")
+    teams: list[TeamRef]
+    points: list[TimelinePoint] = Field(description="One per matchday, oldest first")
+
+
+class CompetitionDataStatus(BaseModel):
+    code: str
+    name: str
+    season: int | None
+    fixtures_total: int
+    fixtures_played: int
+    fixtures_remaining: int
+    freshness: Freshness
+    latest_run_id: int | None
+    latest_run_cutoff: datetime | None
+    latest_run_published: bool | None
+    runs_total: int
+    runs_published: int
+
+
+class IngestionRunOut(BaseModel):
+    id: int
+    competition: str | None
+    season: int | None
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    request_count: int
+    fixtures_inserted: int
+    fixtures_updated: int
+    issues: int
+    consistency_ok: bool | None
+    error: str | None
+
+
+class DataStatusResponse(BaseModel):
+    competitions: list[CompetitionDataStatus]
+    recent_ingestions: list[IngestionRunOut]
 
 
 class ForecastRunResponse(BaseModel):

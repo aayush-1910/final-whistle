@@ -122,6 +122,7 @@ def normalize_team(raw: Mapping[str, Any]) -> Team:
         tla=raw.get("tla") or None,
         country=area.get("name") or None,
         provider_refs=(_ref(raw["id"]),),
+        crest_url=raw.get("crest") or None,
     )
 
 

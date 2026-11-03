@@ -161,6 +161,7 @@ class Team:
     country: str | None = None
     provider_refs: tuple[ProviderRef, ...] = ()
     id: int | None = None
+    crest_url: str | None = None
 
     def __post_init__(self) -> None:
         if not self.name.strip():

@@ -1,53 +1,82 @@
-import { BackendStatus } from './components/BackendStatus'
+import { useState, type ReactNode } from 'react'
+import { MenuIcon } from './components/icons'
+import { SearchBox } from './components/SearchBox'
+import { Sidebar } from './components/Sidebar'
+import { useRoute } from './hooks/useRoute'
+import { CompetitionsPage } from './pages/Competitions'
+import { DataCentrePage } from './pages/DataCentre'
+import { MatchPredictorPage } from './pages/MatchPredictor'
+import { ModelIntelligencePage } from './pages/ModelIntelligence'
+import { OverviewPage } from './pages/Overview'
+import { TeamExplorerPage } from './pages/TeamExplorer'
+import { UclSimulatorPage } from './pages/UclSimulator'
 
-const COMPETITIONS = [
-  'Premier League',
-  'La Liga',
-  'Bundesliga',
-  'Serie A',
-  'UEFA Champions League',
-]
+const PAGES: Record<string, { title: string; subtitle: string; render: (args: string[]) => ReactNode }> = {
+  '': {
+    title: 'Overview',
+    subtitle: 'Live forecasts, title probabilities and key insights across five major competitions.',
+    render: () => <OverviewPage />,
+  },
+  competitions: {
+    title: 'Competitions',
+    subtitle: 'Full season forecasts: every club, every finishing position, every zone.',
+    render: ([code]) => <CompetitionsPage code={code} />,
+  },
+  'match-predictor': {
+    title: 'Match Predictor',
+    subtitle: 'Win, draw and loss probabilities, expected goals and likely scorelines.',
+    render: ([id]) => <MatchPredictorPage fixtureId={id ? Number(id) : undefined} />,
+  },
+  ucl: {
+    title: 'UCL Simulator',
+    subtitle: 'The Champions League simulated to the final, round by round.',
+    render: () => <UclSimulatorPage />,
+  },
+  teams: {
+    title: 'Team Explorer',
+    subtitle: 'Every club’s outlook, form and how its forecast has moved this season.',
+    render: ([id]) => <TeamExplorerPage teamId={id ? Number(id) : undefined} />,
+  },
+  model: {
+    title: 'Model Intelligence',
+    subtitle: 'How the model works and how well it has predicted matches it had never seen.',
+    render: () => <ModelIntelligencePage />,
+  },
+  data: {
+    title: 'Data Centre',
+    subtitle: 'Where the numbers come from, how fresh they are and every import run.',
+    render: () => <DataCentrePage />,
+  },
+}
 
 export default function App() {
+  const [page = '', ...args] = useRoute()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const current = PAGES[page] ?? PAGES['']
+  const activeKey = PAGES[page] ? page : ''
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 sm:px-6">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-pitch-800 py-5">
-        <h1 className="text-xl font-semibold tracking-tight">
-          ⚽ Final Whistle <span className="text-slate-500">· 2026/27</span>
-        </h1>
-        <BackendStatus />
-      </header>
-
-      <main className="flex-1 py-10">
-        <section className="rounded-lg border border-pitch-800 bg-pitch-900 p-6">
-          <h2 className="text-lg font-medium">Forecasts are not available yet</h2>
-          <p className="mt-2 max-w-prose text-slate-400">
-            The prediction engine is still being built. Probabilities will appear here once
-            they come from real data and a tested model run. Until then, nothing on this
-            page is a prediction.
-          </p>
-        </section>
-
-        <section className="mt-8">
-          <h2 className="text-sm font-medium tracking-wide text-slate-500 uppercase">
-            Competitions in scope
-          </h2>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {COMPETITIONS.map((name) => (
-              <li
-                key={name}
-                className="rounded-lg border border-pitch-800 bg-pitch-900 px-4 py-3 text-slate-300"
-              >
-                {name}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </main>
-
-      <footer className="border-t border-pitch-800 py-5 text-xs text-slate-500">
-        Independent project. Not affiliated with any league, club, UEFA or data provider.
-      </footer>
+    <div className="min-h-screen">
+      <Sidebar active={activeKey} open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <div className="min-w-0 lg:pl-[260px]">
+        <header className="flex flex-wrap items-center gap-4 px-5 pt-5 pb-2 sm:px-7">
+          <button
+            className="rounded-lg border border-ink-700 p-2 text-slate-300 lg:hidden"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <MenuIcon />
+          </button>
+          <div className="min-w-0 flex-1 basis-[220px]">
+            <h1 className="text-[28px] leading-tight font-semibold tracking-tight text-white">{current.title}</h1>
+            <p className="mt-0.5 text-[15px] text-slate-300">{current.subtitle}</p>
+          </div>
+          <div className="w-full md:w-auto">
+            <SearchBox />
+          </div>
+        </header>
+        <main className="px-5 pt-4 pb-10 sm:px-7">{current.render(args)}</main>
+      </div>
     </div>
   )
 }

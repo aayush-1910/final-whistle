@@ -1,12 +1,59 @@
 @import "tailwindcss";
 
+/* Final Whistle: dark navy-violet theme (from the project owner's dashboard design). */
 @theme {
-  --color-pitch-950: #0b1220;
-  --color-pitch-900: #111a2e;
-  --color-pitch-800: #1a2540;
-  --color-accent: #4f9cf9;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --color-ink-950: #0b0918; /* page */
+  --color-ink-900: #0f0c20; /* sidebar */
+  --color-ink-850: #141127; /* cards */
+  --color-ink-800: #1b1735; /* raised rows, inputs */
+  --color-ink-700: #262046; /* borders */
+  --color-ink-600: #352d5e;
+
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+
+  /* Chart series (validated: dark surface #141127, CVD-safe adjacent pairs). */
+  --color-series-1: #8b5cf6;
+  --color-series-2: #d07a0a;
+  --color-series-3: #0e8fd0;
+  --color-series-4: #e11d48;
+  --color-series-other: #6b6688;
+
+  /* Status (reserved, always with an icon/label). */
+  --color-good: #22c55e;
+  --color-bad: #f43f5e;
+  --color-warn: #f59e0b;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-pitch-950 text-slate-100 antialiased;
+  @apply bg-ink-950 font-sans text-slate-100 antialiased;
+}
+
+.card {
+  @apply rounded-2xl border border-ink-700/70 bg-ink-850;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin, dark scrollbars inside cards and tables. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-600) transparent;
+}
+
+/* Grid items may shrink below their content's width, so wide tables scroll inside
+   their card instead of stretching the page on phones. */
+main .grid > * {
+  min-width: 0;
 }

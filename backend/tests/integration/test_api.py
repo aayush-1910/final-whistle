@@ -211,3 +211,56 @@ def test_api_is_read_only(env: dict[str, Any]) -> None:
         for m in (getattr(r, "methods", None) for r in c.app.routes)  # type: ignore[attr-defined]
         if getattr(r, "path", "").startswith("/api/")
     )
+
+
+def test_crests_and_emblems(env: dict[str, Any]) -> None:
+    c = env["client"]
+    comps = {x["code"]: x for x in c.get("/api/v1/competitions").json()}
+    assert "emblem_url" in comps["EPL"]  # provider emblem (FakeAPI sends none)
+    t = c.get(f"/api/v1/teams/{env['ids'][57]}").json()["team"]
+    assert "crest_url" in t
+
+
+def test_backfill_run_does_not_become_latest(env: dict[str, Any]) -> None:
+    """A historical run stored AFTER the current one describes an earlier point in the
+    season: 'latest' is decided by data cutoff, and the timeline orders by it."""
+    c, admin, run_id = env["client"], env["admin"], env["run_id"]
+    new_id = admin.execute(
+        """insert into model_runs (model_name, model_version, params, competition_id, season_id,
+                                   data_cutoff, seed, simulation_count, code_version, notes,
+                                   is_backfill)
+           select model_name, model_version, params, competition_id, season_id,
+                  data_cutoff - interval '30 days', seed, simulation_count, code_version, notes, true
+             from model_runs where id = %s returning id""",
+        (run_id,),
+    ).fetchone()[0]
+    admin.execute(
+        """insert into season_forecasts (model_run_id, team_id, current_points, played,
+                  expected_points, expected_position, position_probs, zone_probs)
+           select %s, team_id, current_points, played, expected_points, expected_position,
+                  position_probs, zone_probs from season_forecasts where model_run_id = %s""",
+        (new_id, run_id),
+    )
+    try:
+        url = "/api/v1/competitions/EPL/seasons/2026"
+        assert c.get(f"{url}/forecast?preview=true").json()["run"]["run_id"] == run_id
+        tl = c.get(f"{url}/timeline?preview=true").json()
+        assert tl["metric"] == "champion"
+        # Matchday 1 is only half played at both cutoffs: one point, the later cutoff wins.
+        assert [(p["run_id"], p["matchday"]) for p in tl["points"]] == [(run_id, 0)]
+        assert abs(sum(tl["points"][0]["probs"].values()) - 1) < 1e-9
+        assert c.get(f"{url}/timeline").status_code == 404  # nothing published
+        hist = c.get(f"/api/v1/teams/{env['ids'][57]}/forecast-history"
+                     "?competition=EPL&season=2026&preview=true").json()  # fmt: skip
+        assert [p["run_id"] for p in hist["points"]] == [new_id, run_id]
+    finally:
+        admin.execute("delete from model_runs where id = %s", (new_id,))
+
+
+def test_data_status(env: dict[str, Any]) -> None:
+    d = env["client"].get("/api/v1/data/status").json()
+    epl = next(x for x in d["competitions"] if x["code"] == "EPL")
+    assert (epl["fixtures_total"], epl["fixtures_played"], epl["fixtures_remaining"]) == (2, 1, 1)
+    assert epl["latest_run_id"] == env["run_id"] and epl["runs_published"] == 0
+    assert d["recent_ingestions"][0]["competition"] == "EPL"
+    assert d["recent_ingestions"][0]["status"] in ("succeeded", "partial")

@@ -53,6 +53,23 @@ def season_forecast(
     return _or_404(lambda: q.season_forecast(conn, code, year, preview=preview))
 
 
+@router.get("/competitions/{code}/seasons/{year}/timeline", response_model=s.TimelineResponse,
+            tags=["forecasts"])  # fmt: skip
+def season_timeline(
+    conn: Conn, code: Code, year: Year, preview: Preview = False
+) -> s.TimelineResponse:
+    """Title probability (UCL: winning the trophy) for every club, one point per matchday."""
+    return _or_404(lambda: q.season_timeline(conn, code, year, preview=preview))
+
+
+@router.get("/data/status", response_model=s.DataStatusResponse, tags=["data"])
+def data_status(
+    conn: Conn, limit: Annotated[int, Query(ge=1, le=100)] = 20
+) -> s.DataStatusResponse:
+    """Per-competition data coverage and freshness, plus the latest import runs."""
+    return q.data_status(conn, limit=limit)
+
+
 @router.get("/fixtures/upcoming", response_model=list[s.FixtureOut], tags=["fixtures"])
 def upcoming(
     conn: Conn,

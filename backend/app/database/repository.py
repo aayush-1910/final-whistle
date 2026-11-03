@@ -100,12 +100,22 @@ def upsert_teams(conn: Conn, teams: Sequence[Team], provider: str) -> dict[str, 
         if existing:
             cur.executemany(
                 """update teams set name = %s, short_name = %s, tla = %s,
-                          country = coalesce(%s, country), updated_at = now()
+                          country = coalesce(%s, country),
+                          crest_url = coalesce(%s, crest_url), updated_at = now()
                     where id = %s
-                      and (name, short_name, tla, coalesce(%s, country))
-                          is distinct from (name, short_name, tla, country)""",
+                      and (name, short_name, tla, coalesce(%s, country), coalesce(%s, crest_url))
+                          is distinct from (name, short_name, tla, country, crest_url)""",
                 [
-                    (t.name, t.short_name, t.tla, t.country, existing[e], t.country)
+                    (
+                        t.name,
+                        t.short_name,
+                        t.tla,
+                        t.country,
+                        t.crest_url,
+                        existing[e],
+                        t.country,
+                        t.crest_url,
+                    )
                     for e, t in by_ext.items()
                     if e in existing
                 ],
@@ -114,12 +124,15 @@ def upsert_teams(conn: Conn, teams: Sequence[Team], provider: str) -> dict[str, 
         if missing:
             cur.executemany(
                 """with t as (
-                       insert into teams (name, short_name, tla, country)
-                       values (%s, %s, %s, %s) returning id)
+                       insert into teams (name, short_name, tla, country, crest_url)
+                       values (%s, %s, %s, %s, %s) returning id)
                    insert into team_provider_ids (team_id, provider, external_id)
                    select id, %s, %s from t
                    returning external_id, team_id""",
-                [(t.name, t.short_name, t.tla, t.country, provider, e) for e, t in missing],
+                [
+                    (t.name, t.short_name, t.tla, t.country, t.crest_url, provider, e)
+                    for e, t in missing
+                ],
                 returning=True,
             )
             while True:
@@ -128,6 +141,15 @@ def upsert_teams(conn: Conn, teams: Sequence[Team], provider: str) -> dict[str, 
                 if not cur.nextset():
                     break
     return {k: int(v) for k, v in existing.items()}
+
+
+def set_competition_emblem(conn: Conn, competition_id: int, url: str | None) -> None:
+    if url:
+        conn.execute(
+            """update competitions set emblem_url = %s
+                where id = %s and emblem_url is distinct from %s""",
+            (url, competition_id, url),
+        )
 
 
 def link_season_teams(conn: Conn, season_id: int, team_ids: Iterable[int]) -> None:

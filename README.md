@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 7 (API) complete → dashboard to be built from the project owner's design.**
+**Current phase: Milestone 7 (API + dashboard) complete → next is Milestone 8 (deployment).**
 
 Done so far:
 
@@ -921,7 +921,9 @@ Done so far:
 
 - Milestone 7 (API): read-only FastAPI v1 with competitions, standings, season forecasts (incl. UCL rounds), upcoming fixtures, fixture detail with scorelines, team pages, forecast history, model versions and backtest performance. Published-only by default, with `?preview=true` for clearly flagged unpublished runs; provenance and data freshness on every response. Publishing goes through `backend/scripts/publish_run.py` (quality gates). Reference: `docs/api.md`.
 
-**Next action:** build the dashboard from the project owner's own design (the frontend is intentionally still a shell), then Milestone 8 (deployment).
+- Milestone 7 (dashboard): React dashboard built from the project owner's design: Overview, Competitions, Match Predictor, UCL Simulator, Team Explorer, Model Intelligence and Data Centre, with search (Ctrl K). Shows published forecasts only, with model version and data cutoff next to every probability. Matchday-by-matchday history comes from historical backfill runs (`backend/scripts/backfill_forecasts.py`, flagged `is_backfill`, using only data before each cutoff). Club crests and competition emblems are provider URLs.
+
+**Next action:** Milestone 8 (deployment and scheduled data refresh). Trophy and stadium artwork to be added when the owner supplies the files.
 
 ---
 

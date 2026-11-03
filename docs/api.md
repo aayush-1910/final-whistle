@@ -33,6 +33,8 @@ Interactive docs with every field described: **http://localhost:8000/docs** (whi
 | `GET /fixtures/{id}` (alias `/fixtures/{id}/forecast`) | One fixture: result or forecast, top-10 likely scorelines, 6×6 score grid | `preview` |
 | `GET /teams/{id}` | Team: seasons with position/points, last 5 results, next 5 fixtures | `preview` |
 | `GET /teams/{id}/forecast-history` | A team's forecast run by run (for trend charts) | `competition`, `season` (required), `preview` |
+| `GET /competitions/{code}/seasons/{year}/timeline` | Title probability (UCL: winning it) for every club, one point per matchday (latest run per matchday; 0 = pre-season) | `preview` |
+| `GET /data/status` | Per competition: fixtures played/remaining, freshness, run counts; plus the latest import runs | `limit` (1–100, default 20) |
 | `GET /models/versions` | Model versions with run counts; which is current | |
 | `GET /models/performance` | Latest stored backtests (match level and season level) with all metrics | |
 | `GET /forecasts/{run_id}` | A specific run (published or not; the run says which) | |
@@ -42,6 +44,10 @@ season's start year (`2026` = 2026/27).
 
 Errors: `404` with a `detail` message (unknown competition/season/fixture/team, or no published
 forecast yet); `422` for invalid parameters; `503` if the database is unreachable.
+
+"Latest" run always means the latest **data cutoff**, not the latest execution: historical
+backfill runs (`run.is_backfill = true`) are computed later but describe an earlier point in the
+season. Team refs carry `crest_url` and competitions `emblem_url` (provider image URLs).
 
 ## Key response shapes (abridged)
 
@@ -78,6 +84,17 @@ forecast yet); `422` for invalid parameters; `503` if the database is unreachabl
 included, shoot-out in `home_penalties`/`away_penalties`), and `forecast`
 (`p_home`, `p_draw`, `p_away`, `xg_home`, `xg_away`, plus run id, model version, cutoff,
 `is_published`), which is `null` when no visible run covers the fixture.
+
+## Matchday history (backfill)
+
+```bash
+cd backend
+.venv/Scripts/python scripts/backfill_forecasts.py                        # list what is missing
+.venv/Scripts/python scripts/backfill_forecasts.py --save --publish --accept-secondary-rules
+```
+
+Refits the model at the end of each completed matchday using only earlier results, simulates the
+season and stores the run as a backfill. Idempotent. UCL: league phase only.
 
 ## Running
 

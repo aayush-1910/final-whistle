@@ -41,6 +41,7 @@ def save_season_forecast(
     model_version: str,
     params: dict[str, Any],
     code_version: str | None,
+    is_backfill: bool = False,
 ) -> int:
     """Store one run atomically; returns the model_run id."""
     with conn.transaction():
@@ -56,12 +57,13 @@ def save_season_forecast(
 
         run = conn.execute(
             """insert into model_runs (model_name, model_version, params, competition_id,
-                   season_id, data_cutoff, seed, simulation_count, code_version, notes)
-               values (%s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s::jsonb) returning id""",
+                   season_id, data_cutoff, seed, simulation_count, code_version, notes,
+                   is_backfill)
+               values (%s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s::jsonb, %s) returning id""",
             (
                 model_name, model_version, json.dumps(params, default=str), competition_id,
                 season_id, forecast.as_of, forecast.seed, forecast.n_sims, code_version,
-                json.dumps(forecast.notes),
+                json.dumps(forecast.notes), is_backfill,
             ),
         ).fetchone()  # fmt: skip
         assert run is not None
