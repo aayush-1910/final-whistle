@@ -1,9 +1,8 @@
 # Model Methodology
 
-> Status: **baseline models implemented (Milestone 3), NOT yet validated.**
-> All parameter values below are provisional defaults. They will be tuned and
-> evaluated by time-ordered backtesting in Milestone 6. No forecast is published
-> until then.
+> Status: **backtested (Milestone 6).** The production configuration is model version **0.2.0**
+> (`backend/app/models/config.py`, decision OD-005). Evidence: `docs/backtest-report.md`.
+> Parameter tables below list the original defaults; section 6 lists what is used in production.
 
 ## Inputs
 
@@ -72,9 +71,10 @@ known limitation, to be measured in Milestone 6.
 38 of 143 clubs appear only in the UCL (median ~10 matches in the data). Elo starts them at
 1500; Poisson shrinks them toward an average team. Neither has domestic results for them.
 
-## Known limitations (to evaluate in Milestone 6)
+## Known limitations (evaluated in Milestone 6; see section 6)
 
 1. **Promoted clubs in Poisson** start as an *average* team, which is likely too generous.
+   **Addressed:** learned group priors (production v0.2.0).
    Example: in the 2026-11-03 preview, Arsenal v Hull City was Elo 85% / Poisson 69% home win.
 2. Thin cross-league link (see above).
 3. Short history: data starts in 2023/24, so the first season is mostly burn-in.
@@ -202,3 +202,42 @@ The same engine (`app/simulations/table.py`) reproduces the published final tabl
 In head-to-head leagues, football-data.org's standings disagree with the official tables because
 they order level clubs by goal difference (see `docs/known-data-issues.md` #5). Our engine follows
 the official rules.
+
+## 6. Backtesting and the production configuration (Milestone 6)
+
+Full results: `docs/backtest-report.md` (stored in the `backtest_runs` table).
+
+**Protocol.** Walk-forward with weekly refits on strictly earlier matches (tested in
+`tests/test_evaluation.py`). 2023/24 is burn-in, 2024/25 is for tuning, and 2025/26 plus
+2026/27 to date is the test period, scored once (2,060 matches).
+
+**Match level (test period).**
+
+| Model | Log loss | Brier | Accuracy | Calibration error |
+|---|---|---|---|---|
+| **Poisson (production)** | **0.9812** | 0.5831 | 53.5% | 0.012 |
+| Elo | 0.9908 | 0.5903 | 51.7% | 0.007 |
+| Base rates | 1.0662 | 0.6447 | 44.9% | 0.009 |
+
+Poisson beats Elo with a 95% bootstrap interval that excludes zero. Parameter tuning and the
+Elo+Poisson blend gave **no measurable improvement** on unseen data, so the simpler model is used.
+Calibration is good overall. Strong favourites (65–90%) won slightly more often than predicted,
+which is mild under-confidence.
+
+**Season level.** Fixed team strengths looked overconfident for "likely" outcomes (70–90%
+predictions came true 69% of the time in 2025/26). Adding per-simulation strength uncertainty
+(`strength_sd` = 0.15, chosen on 2024/25) brought that band to 81% and improved final-position
+RPS, but was slightly worse for title/relegation. Overall it was **roughly neutral**. The
+season-level sample is small (4 leagues × 4 dates per season), so treat this as indicative.
+
+**Production configuration (v0.2.0).** Poisson, decay 0.0019/day, L2 4.0, group priors for
+promoted / UCL-only clubs, `strength_sd` 0.15 (domestic leagues).
+
+**What changed in the forecasts** (2026-11-03, v0.1.0 → v0.2.0): Arsenal EPL title 84% → 72%,
+Bayern 95% → 86%, Inter 59% → 47%; promoted Hull City relegation 10% → 21%.
+
+**Still open.**
+- The UCL simulator uses fixed strengths (no `strength_sd` yet).
+- The UCL knockout phase must condition on the real draw before late January 2027.
+- League rules are from a secondary source and should be checked against the primary documents.
+- With only ~1.3 test seasons, re-run the backtests as each season completes.

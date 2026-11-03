@@ -49,6 +49,10 @@ to Milestone 3 and is not a blocker.
 3. Fixed starting value (e.g., 1300).
 4. Mean rating of the clubs relegated from that league the season before.
 
+**Update (OD-005):** the Poisson model now learns a *promoted-club* mean (and a *UCL-only-club*
+mean) and shrinks those clubs toward it (`group_priors`). Promoted clubs come out clearly weaker
+than average (attack −0.32, defence −0.20 on the log scale, fit to 2025-07-01).
+
 **Decision:** Elo uses option 4 for promoted clubs; a club starts at the mean rating of
 the clubs it replaced, which is data-driven and needs no second-tier data. Clubs with no
 earlier league season in the data, and UCL-only clubs, start at the base rating (1500).
@@ -75,3 +79,26 @@ five competitions. UCL matches are the only link between leagues: 152 matches in
 were between clubs from two of the four leagues. 38 UCL-only clubs have no domestic data.
 Per-league offsets or an external league-strength prior can be added if backtests show the
 shared pool is miscalibrated across leagues.
+
+---
+
+## OD-005 — Production model choice and settings
+
+**Status:** Decided 2026-11-03 from backtest evidence (`docs/backtest-report.md`, backtest runs #1–2)
+**Question:** Which match model, with which settings, should drive forecasts?
+**Protocol:** walk-forward with weekly refits; settings chosen on 2024/25 only; chosen settings
+scored once on 2025/26 + 2026/27 to date (2,060 matches).
+**Evidence:**
+- Every model beats base rates by a wide margin (log loss 0.981 vs 1.066).
+- **Poisson beats Elo** on the test period: −0.0096 log loss per match, 95% CI [−0.017, −0.003].
+- **Tuning did not measurably help:** tuned vs default Poisson −0.0003, CI [−0.0027, +0.0024].
+- **The Elo+Poisson blend** won during tuning but **did not beat Poisson alone** on test data
+  (CI spans 0), so it is not used.
+- Season level: per-simulation strength uncertainty (sd 0.15, chosen on 2024/25) was roughly
+  neutral on 2025/26 overall (better final-position RPS and top-4 Brier, slightly worse
+  title/relegation Brier), and reduced overconfidence in the 70–90% band.
+
+**Decision:** `backend/app/models/config.py`, model version **0.2.0**:
+Poisson (decay 0.0019/day, L2 4.0, group priors on), no blend, `strength_sd` 0.15 for domestic
+leagues. The UCL simulator still uses fixed strengths; adding uncertainty there is a follow-up.
+Re-run both backtests before changing any of these, and bump the model version.

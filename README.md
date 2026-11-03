@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 5 complete → next is Milestone 6 (backtesting and calibration).**
+**Current phase: Milestone 6 complete → next is Milestone 7 (API and dashboard).**
 
 Done so far:
 
@@ -915,7 +915,9 @@ Done so far:
 
 - Milestone 5: Champions League simulator built from the **official UEFA 2026/27 regulations** (Arts. 17–22, primary source): league phase with all 10 tiebreakers, play-offs, the fixed bracket, two-legged ties, extra time, penalties and the neutral final. Every simulated bracket is audited against the rules in tests. The tiebreak engine reproduces 8 official final tables, including head-to-head cases, and revealed that the provider's own standings ignore head-to-head (`docs/known-data-issues.md` #5). **Open item:** conditioning on the real knockout draw must be built before the play-off draw in late January 2027.
 
-**Next action:** Milestone 6: walk-forward backtesting, calibration, baseline comparison, and parameter tuning.
+- Milestone 6: walk-forward backtesting (weekly refits, tuned on 2024/25, tested once on 2,060 later matches). Poisson beats Elo significantly and both beat base rates; tuning and blending gave no measurable gain on unseen data. The production config is v0.2.0 (`backend/app/models/config.py`): Poisson with learned priors for promoted/UCL-only clubs, plus team-strength uncertainty in season simulations. Results: `docs/backtest-report.md`, stored in `backtest_runs`; decision OD-005.
+
+**Next action:** Milestone 7: FastAPI endpoints and the dashboard, reading stored forecasts and backtest results. Before anything is published: verify the domestic rules from primary sources, and build UCL real-draw conditioning before late January 2027.
 
 ---
 
