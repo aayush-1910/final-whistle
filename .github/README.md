@@ -50,7 +50,7 @@ Most "predictions" online are vibes with a percentage sign stuck on. Final Whist
 ## 🛣️ Roadmap
 
 - [x] Pick a data source that covers all five competitions for 2026/27
-- [ ] Project foundations
+- [x] Project foundations
 - [ ] Pull in fixtures, results and tables
 - [ ] Team strength ratings and match predictions
 - [ ] League season simulator
