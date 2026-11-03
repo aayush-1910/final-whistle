@@ -57,7 +57,7 @@
 |---|---|---|---|---|
 | `scheduled` | no | no | no | **yes** |
 | `postponed` | no | no | no | **yes** |
-| `in_progress` | yes | no | no | no |
+| `in_progress` | yes | no | no | **yes**: partial score ignored |
 | `suspended` | yes | no | no | no |
 | `abandoned` | yes | no | no | no |
 | `finished` | yes | **yes** | **yes** | no |
@@ -65,7 +65,7 @@
 | `cancelled` | no | no | no | no |
 | `unknown` | yes | no | no | no; must be investigated |
 
-Open question for Milestone 4: how a forecast run should treat `in_progress` and `suspended` fixtures. Currently neither is simulated nor counted.
+Decision (2026-11-03): an `in_progress` (live) match is treated as unplayed. It is simulated from 0-0 and its partial score does not count in the table. `suspended` fixtures are neither simulated nor counted; this will be revisited if one occurs.
 
 ### StandingRow
 Provider-reported table row, used to cross-check tables we compute ourselves.

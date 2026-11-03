@@ -66,8 +66,11 @@ _MAY_HAVE_SCORE = frozenset(
     }
 )
 _MUST_HAVE_SCORE = frozenset({FixtureStatus.FINISHED, FixtureStatus.AWARDED})
-# Fixtures still to be played (the ones a simulation samples).
-_TO_BE_PLAYED = frozenset({FixtureStatus.SCHEDULED, FixtureStatus.POSTPONED})
+# Fixtures still to be played (the ones a simulation samples).  A live match
+# counts as unplayed: its partial score is ignored (decision 2026-11-03).
+_TO_BE_PLAYED = frozenset(
+    {FixtureStatus.SCHEDULED, FixtureStatus.POSTPONED, FixtureStatus.IN_PROGRESS}
+)
 
 
 # ---------------------------------------------------------------------------

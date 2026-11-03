@@ -95,8 +95,14 @@ class TestFixture:
     def test_postponed_still_to_be_played(self) -> None:
         assert fixture(status=FixtureStatus.POSTPONED).is_to_be_played
 
+    def test_in_progress_treated_as_unplayed(self) -> None:
+        # Decision 2026-11-03: a live match is simulated from scratch; its
+        # partial score is ignored and it does not count in the table yet.
+        f = fixture(status=FixtureStatus.IN_PROGRESS, home_score=1, away_score=0)
+        assert f.is_to_be_played and not f.is_completed
+
     @pytest.mark.parametrize(
-        "status", [FixtureStatus.CANCELLED, FixtureStatus.UNKNOWN, FixtureStatus.IN_PROGRESS]
+        "status", [FixtureStatus.CANCELLED, FixtureStatus.UNKNOWN, FixtureStatus.SUSPENDED]
     )
     def test_not_simulated(self, status: FixtureStatus) -> None:
         assert not fixture(status=status).is_to_be_played

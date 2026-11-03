@@ -481,6 +481,10 @@ No page should display fabricated sample predictions as though they were live. P
 
 ### Running locally
 
+**Quickest way (Windows):** double-click `dev.cmd` in the project root. It sets everything up on first run, starts the backend and frontend in two windows, and opens the dashboard. Close those windows to stop.
+
+Manual setup, if you prefer:
+
 One-time setup (Windows, Git Bash; on PowerShell use `.venv\Scripts\activate`):
 
 ```bash
