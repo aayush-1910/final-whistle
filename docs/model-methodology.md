@@ -97,6 +97,61 @@ calibration, and baseline comparison come in Milestone 6.
 
 Reproduce: `backend/.venv/Scripts/python backend/scripts/preview_models.py`.
 
-## 3. Monte Carlo simulation
+## 3. Domestic season simulation (`app/simulations/`)
 
-Milestones 4 (domestic) and 5 (UCL).
+1. Results that kicked off before `as_of` are fixed; every other fixture of the season is
+   sampled from the Poisson model (independent home/away goal counts), 10,000 times by default.
+2. Each simulated season is ranked with that league's **2026/27 tiebreakers**
+   (`backend/rules/2026/*.json`), and finishing positions are counted.
+3. Outputs per team: probability of each position, title probability, zone probabilities
+   (Champions League places, relegation, etc.), expected points, expected position. Every
+   remaining match also gets home/draw/away probabilities and expected goals.
+
+### League rules (2026/27)
+
+| League | Order after points | Special cases |
+|---|---|---|
+| EPL | GD, goals scored, head-to-head points, head-to-head away goals, play-off | |
+| La Liga | **head-to-head points**, head-to-head GD, GD, goals scored, fair play (3+ clubs), play-off | |
+| Bundesliga | GD, goals scored, head-to-head points, head-to-head away goals, away goals, play-off | 16th: relegation play-off (own zone, outcome not simulated) |
+| Serie A | **head-to-head points**, head-to-head GD, GD, goals scored, lots | Ties for **1st or 17th** settled by a **play-off** |
+
+**Source quality: secondary.** The rules were taken from the 2026/27 Wikipedia season pages,
+which cite the official regulations (Premier League, RFEF Art. 29, DFL SpOL §II.2, Lega Serie A).
+The official sites could not be read directly. Every rules file records `source_quality:
+"secondary"`; publishing should require these to be checked against the primary documents.
+
+Zones are **by league position only**. Domestic cup winners and any extra Champions League
+place (from the UEFA association coefficient) can shift European places at season end. These
+are not simulated.
+
+### Approximations
+
+- Criteria we have no data for (fair-play points, drawing of lots, neutral-venue play-offs other
+  than Serie A's) are resolved by a seeded random draw.
+- Serie A play-offs are modelled as 50/50 between the two clubs straddling 1st/2nd or 17th/18th.
+  3+ club ties at those boundaries are approximated.
+- Head-to-head criteria are recomputed within each shrinking tied sub-group; this may differ
+  from a league's exact "restart" wording in rare 3+ club ties.
+- **Team strength is fixed across simulations** (no parameter uncertainty), so outcomes far
+  in the future probably look more certain than they are. Milestone 6 calibration will measure
+  this. Adding strength uncertainty is the likely fix.
+
+### Fixture-list check
+
+Every ordered pair (home, away) must appear exactly once in a double round-robin. Duplicates
+abort the run; missing pairs are simulated and reported in the run notes. This currently catches
+La Liga's Rayo Vallecano v Athletic Club, which the provider lists as `CANCELLED`
+(`docs/known-data-issues.md` #3).
+
+### Reproducibility
+
+Each run stores: model name/version, all parameters (incl. fitted μ and home advantage), the
+rules used, data cutoff, seed, simulation count, and git commit (`model_runs` table). A fixed
+seed reproduces a run exactly (tested). Runs are stored `is_published = false`.
+
+Performance: about 1–2 s per league for 10,000 simulations.
+
+## 4. Champions League simulation
+
+Milestone 5.

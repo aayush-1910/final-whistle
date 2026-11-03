@@ -117,6 +117,9 @@ verified against official competition regulations.
 | `standings_snapshots`, `standings_rows` | Provider tables captured on each ingestion, for cross-checking |
 | `ingestion_runs` | Audit trail: status, request count, inserted/updated counts, issues, consistency result, error |
 | `schema_migrations` | Applied migrations with checksums |
+| `model_runs` (0003) | One forecast run: model, params, rules, data cutoff, seed, simulation count, git commit, `is_published` (default false) |
+| `season_forecasts` (0003) | Per run and team: current/expected points, expected position, `position_probs` array (index 1 = 1st), `zone_probs` JSON |
+| `match_forecasts` (0003) | Per run and remaining fixture: home/draw/away probabilities (DB-checked to sum to 1) and expected goals |
 
 Row-level security is enabled on every table with no policies, so Supabase's public REST roles
 cannot read or write them. The backend connects as the table owner.

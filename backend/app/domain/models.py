@@ -413,8 +413,20 @@ class LeagueRules:
     verified_on: date | None = None
     notes: str = ""
     points_for_loss: int = 0
+    # "primary" = the official regulation itself was read; "secondary" = a
+    # reputable summary that cites it (e.g. Wikipedia).  Publishing should
+    # require primary (Milestone 7 gate).
+    source_quality: str = "secondary"
+    # Positions where a points tie is settled by a play-off match instead of
+    # the tiebreakers (e.g. Serie A: 1st and 17th).
+    playoff_positions: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
+        if self.source_quality not in ("primary", "secondary"):
+            raise DomainValidationError("source_quality must be 'primary' or 'secondary'")
+        for pos in self.playoff_positions:
+            if not 1 <= pos < self.team_count:
+                raise DomainValidationError(f"Invalid play-off position {pos}")
         if self.team_count < 2:
             raise DomainValidationError("team_count must be >= 2")
         if not self.points_for_win > self.points_for_draw >= self.points_for_loss:

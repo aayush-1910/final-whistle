@@ -1,0 +1,21 @@
+{
+  "competition_code": "BUNDESLIGA",
+  "season_start_year": 2026,
+  "team_count": 18,
+  "points_for_win": 3,
+  "points_for_draw": 1,
+  "tiebreakers": ["points", "goal_difference", "goals_for", "head_to_head_points", "head_to_head_away_goals_for", "away_goals_for", "playoff"],
+  "zones": [
+    {"key": "champion", "label": "Champions", "first_position": 1, "last_position": 1},
+    {"key": "champions_league", "label": "Champions League", "first_position": 1, "last_position": 4},
+    {"key": "europa_league", "label": "Europa League", "first_position": 5, "last_position": 5},
+    {"key": "conference_league", "label": "Conference League play-off", "first_position": 6, "last_position": 6},
+    {"key": "relegation_playoff", "label": "Relegation play-off", "first_position": 16, "last_position": 16},
+    {"key": "relegation", "label": "Relegation", "first_position": 17, "last_position": 18}
+  ],
+  "playoff_positions": [],
+  "source": "https://en.wikipedia.org/wiki/2026%E2%80%9327_Bundesliga (rules note, citing DFL Spielordnung (SpOL) §II.2, 4 August 2026)",
+  "source_quality": "secondary",
+  "verified_on": "2026-11-03",
+  "notes": "16th plays a two-legged relegation play-off against the 2. Bundesliga 3rd-placed club; its outcome is not simulated (shown as its own zone). DFB-Pokal winner can shift European places (not simulated)."
+}

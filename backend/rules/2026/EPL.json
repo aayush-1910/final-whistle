@@ -1,0 +1,19 @@
+{
+  "competition_code": "EPL",
+  "season_start_year": 2026,
+  "team_count": 20,
+  "points_for_win": 3,
+  "points_for_draw": 1,
+  "tiebreakers": ["points", "goal_difference", "goals_for", "head_to_head_points", "head_to_head_away_goals_for", "playoff"],
+  "zones": [
+    {"key": "champion", "label": "Champions", "first_position": 1, "last_position": 1},
+    {"key": "champions_league", "label": "Champions League", "first_position": 1, "last_position": 4},
+    {"key": "europa_league", "label": "Europa League", "first_position": 5, "last_position": 5},
+    {"key": "relegation", "label": "Relegation", "first_position": 18, "last_position": 20}
+  ],
+  "playoff_positions": [],
+  "source": "https://en.wikipedia.org/wiki/2026%E2%80%9327_Premier_League (table rules note, citing premierleague.com tables)",
+  "source_quality": "secondary",
+  "verified_on": "2026-11-03",
+  "notes": "Zones are by league position only. FA Cup / League Cup winners and a possible 5th Champions League place (if England finishes top-2 in the UEFA association coefficient) can shift European places; these are decided outside the league and are not simulated. A play-off for tied clubs applies only where it matters (title/relegation/Europe) and is approximated by a random draw."
+}

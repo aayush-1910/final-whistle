@@ -194,3 +194,44 @@ def test_database_rejects_team_playing_itself(db: psycopg.Connection[Any]) -> No
         db.execute(
             "update fixtures set away_team_id = home_team_id where provider_fixture_id = '1'"
         )
+
+
+def test_season_forecast_round_trip(db: psycopg.Connection[Any]) -> None:
+    from datetime import UTC, datetime, timedelta
+    from itertools import permutations
+
+    from app.database.forecasts import save_season_forecast
+    from app.domain.models import LeagueRules, Tiebreaker, Zone
+    from app.models.data import MatchRecord
+    from app.models.poisson import PoissonModel, PoissonParams
+    from app.simulations.domestic import simulate_league
+
+    with FakeAPI().client() as c:
+        ingest_season(db, c, "EPL", 2026, raw_dir=None)
+    team_ids = [r[0] for r in db.execute("select id from teams order by id")]
+    t0 = datetime(2026, 8, 1, tzinfo=UTC)
+    recs = [
+        MatchRecord(i, t0 + timedelta(days=i + 10), "EPL", 2026, h, a, None, None)
+        for i, (h, a) in enumerate(permutations(team_ids, 2))
+    ]
+    rules = LeagueRules("EPL", 2026, 3, 3, 1, (Tiebreaker.POINTS, Tiebreaker.PLAYOFF),
+                        zones=(Zone("champion", "C", 1, 1),))  # fmt: skip
+    model = PoissonModel(PoissonParams(), t0, 0.3, 0.2, {t: 0.0 for t in team_ids},
+                         {t: 0.0 for t in team_ids}, 100, True)  # fmt: skip
+    f = simulate_league(recs, "EPL", 2026, model, rules, t0, n_sims=500, seed=1)
+    # Synthetic fixture ids don't exist in the DB; store them as provider-missing fixtures.
+    from dataclasses import replace
+
+    f.matches = [replace(m, fixture_id=None) for m in f.matches]
+    run_id = save_season_forecast(
+        db, f, model_name="test", model_version="0", params={"x": 1}, code_version="abc"
+    )
+    run = db.execute("select is_published, simulation_count, seed from model_runs").fetchone()
+    assert run == (False, 500, 1)
+    rows = db.execute(
+        "select team_id, position_probs, zone_probs from season_forecasts where model_run_id = %s",
+        (run_id,),
+    ).fetchall()
+    assert len(rows) == 3 and all(abs(sum(p) - 1) < 1e-9 for _, p, _ in rows)
+    assert sum(z["champion"] for _, _, z in rows) == pytest.approx(1)
+    assert db.execute("select count(*) from match_forecasts").fetchone() == (6,)

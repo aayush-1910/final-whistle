@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 3 complete → next is Milestone 4 (domestic league simulation).**
+**Current phase: Milestone 4 complete → next is Milestone 5 (Champions League simulation).**
 
 Done so far:
 
@@ -911,7 +911,9 @@ Done so far:
 
 - Milestone 3: chronological Elo ratings (with an ordered-logit draw model) and a time-weighted Poisson goal model, both with built-in leakage guards and tests against synthetic leagues with known strengths. **Not yet validated.** A first sanity check beats base rates; see `docs/model-methodology.md`. Developer preview: `backend/scripts/preview_models.py`.
 
-**Next action:** Milestone 4: season-specific league rules (verified), the table/tiebreaker engine, and the Monte Carlo season simulator.
+- Milestone 4: 2026/27 rules for the four leagues (`backend/rules/2026/`, secondary source, flagged as such), a tiebreaker engine covering each league's rules (including head-to-head mini-leagues and Serie A play-offs), a Monte Carlo season simulator (10,000 runs in about 1–2 s per league) with a fixture-list completeness check, and reproducible, unpublished forecast storage. Run: `backend/scripts/run_forecast.py`.
+
+**Next action:** Milestone 5: verify the official 2026/27 UCL regulations, then simulate the remaining league phase and the knockout bracket.
 
 ---
 
