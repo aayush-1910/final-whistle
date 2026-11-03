@@ -152,6 +152,53 @@ seed reproduces a run exactly (tested). Runs are stored `is_published = false`.
 
 Performance: about 1–2 s per league for 10,000 simulations.
 
-## 4. Champions League simulation
+## 4. Champions League simulation (`app/simulations/ucl.py`)
 
-Milestone 5.
+**Source: primary.** [Regulations of the UEFA Champions League 2026/27](https://documents.uefa.com/r/Regulations-of-the-UEFA-Champions-League-2026/27-Online),
+Arts. 17–22 (in force 29 July 2026), read directly on 2026-11-03. The Annex B bracket diagram is
+published only as an image. Its paths were taken from UEFA's written draw explainers and
+cross-checked against the actual 2024/25 draw.
+
+| Stage | Rule implemented | Article |
+|---|---|---|
+| League phase | 36 clubs, 8 matches, one table; 1–8 → round of 16, 9–24 → play-offs, 25–36 out | 17.03–17.04 |
+| Tiebreakers | GD, goals, away goals, wins, away wins, opponents' points, opponents' GD, opponents' goals, disciplinary points*, club coefficient* | 18.01 |
+| Play-offs | 9/10 v 23/24, 11/12 v 21/22, 13/14 v 19/20, 15/16 v 17/18 (pairing drawn); seed hosts 2nd leg | 19.02 |
+| Round of 16 | winners of the 15/16 ties meet 1/2, 13/14 → 3/4, 11/12 → 5/6, 9/10 → 7/8; each seeded pair split across the two halves by draw; seed hosts 2nd leg | 19.03, Annex B |
+| QF / SF | per half: [1/2 slot v 7/8 slot], [3/4 slot v 5/6 slot], then their winners; the club that knocks out a seed takes its slot; 1–4 slot hosts QF 2nd leg, 1/2 slot hosts SF 2nd leg | 19.04 |
+| Ties | aggregate goals, **no away-goals rule**, extra time at end of 2nd leg, then penalties | 20–21 |
+| Final | single match at a neutral venue, extra time, penalties | 22 |
+
+\* Not in our data: a tie reaching these is broken by a seeded random draw.
+
+Approximations: extra-time goals use the match's expected goals × 30/90; penalty shoot-outs are 50/50.
+
+**Validation of the league-phase table logic.** Rebuilding the 2025/26 league phase from match
+results reproduces the official final ranking for all 36 clubs, with no random tiebreaks needed
+(regression test `tests/integration/test_real_tables.py`).
+
+**Every simulated bracket is audited** in tests: 2,000 simulated knockout phases are checked for
+correct play-off pairings, round-of-16 opponents, slot inheritance, second-leg hosts, and that
+clubs from the same seeded pair can only meet in the final. Expected clubs per round are exactly
+16 / 8 / 4 / 2 / 1.
+
+**Scope limit.** Supported only while no knockout fixtures exist in the data (today: league
+phase, matchday 4). Once the play-off draw is made (late January 2027), the simulator must
+condition on the real draw and on played knockout legs. **This must be built before then.**
+Until it is, the simulator refuses to run instead of producing a wrong bracket.
+
+## 5. Tiebreak engine validation on real tables
+
+The same engine (`app/simulations/table.py`) reproduces the published final tables:
+
+| Check | Result |
+|---|---|
+| EPL 2023/24, 2024/25, 2025/26 | all 20 positions match the provider's standings |
+| Bundesliga 2023/24, 2024/25, 2025/26 | all 18 positions match |
+| UCL league phase 2025/26 | all 36 positions match |
+| La Liga 2024/25 (positions 7–18) | matches the published table, including a 3-club head-to-head mini-league (Getafe / Espanyol / Alavés) |
+| Serie A 2023/24 (positions 8–18) | matches the published table (Torino above Napoli, Cagliari above Empoli on head-to-head) |
+
+In head-to-head leagues, football-data.org's standings disagree with the official tables because
+they order level clubs by goal difference (see `docs/known-data-issues.md` #5). Our engine follows
+the official rules.

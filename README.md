@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 4 complete → next is Milestone 5 (Champions League simulation).**
+**Current phase: Milestone 5 complete → next is Milestone 6 (backtesting and calibration).**
 
 Done so far:
 
@@ -913,7 +913,9 @@ Done so far:
 
 - Milestone 4: 2026/27 rules for the four leagues (`backend/rules/2026/`, secondary source, flagged as such), a tiebreaker engine covering each league's rules (including head-to-head mini-leagues and Serie A play-offs), a Monte Carlo season simulator (10,000 runs in about 1–2 s per league) with a fixture-list completeness check, and reproducible, unpublished forecast storage. Run: `backend/scripts/run_forecast.py`.
 
-**Next action:** Milestone 5: verify the official 2026/27 UCL regulations, then simulate the remaining league phase and the knockout bracket.
+- Milestone 5: Champions League simulator built from the **official UEFA 2026/27 regulations** (Arts. 17–22, primary source): league phase with all 10 tiebreakers, play-offs, the fixed bracket, two-legged ties, extra time, penalties and the neutral final. Every simulated bracket is audited against the rules in tests. The tiebreak engine reproduces 8 official final tables, including head-to-head cases, and revealed that the provider's own standings ignore head-to-head (`docs/known-data-issues.md` #5). **Open item:** conditioning on the real knockout draw must be built before the play-off draw in late January 2027.
+
+**Next action:** Milestone 6: walk-forward backtesting, calibration, baseline comparison, and parameter tuning.
 
 ---
 

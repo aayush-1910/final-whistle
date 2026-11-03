@@ -47,6 +47,21 @@ class TeamTotals:
     wins: int = 0
     away_wins: int = 0
     away_goals_for: int = 0
+    # Sums over this team's opponents (UCL league phase, Art. 18.01 f-h)
+    opp_points: int = 0
+    opp_goal_difference: int = 0
+    opp_goals_for: int = 0
+
+
+def add_opponent_totals(tot: dict[int, TeamTotals], results: Sequence[Result]) -> None:
+    """Fill opp_* fields: totals of every opponent faced (once per match played)."""
+    for h, a, _, _ in results:
+        if h in tot and a in tot:
+            for team, opp in ((h, a), (a, h)):
+                o = tot[opp]
+                tot[team].opp_points += o.points
+                tot[team].opp_goal_difference += o.goals_for - o.goals_against
+                tot[team].opp_goals_for += o.goals_for
 
 
 def _totals(
@@ -86,6 +101,9 @@ def _metric(crit: Tiebreaker) -> Callable[[TeamTotals], int] | None:
         Tiebreaker.WINS: lambda t: t.wins,
         Tiebreaker.AWAY_WINS: lambda t: t.away_wins,
         Tiebreaker.AWAY_GOALS_FOR: lambda t: t.away_goals_for,
+        Tiebreaker.OPPONENTS_POINTS: lambda t: t.opp_points,
+        Tiebreaker.OPPONENTS_GOAL_DIFFERENCE: lambda t: t.opp_goal_difference,
+        Tiebreaker.OPPONENTS_GOALS_FOR: lambda t: t.opp_goals_for,
     }.get(crit)
 
 
@@ -109,7 +127,9 @@ def rank_teams(
         members = set(group)
         return [r for r in results if r[0] in members and r[1] in members]
 
-    return rank_from_totals(teams, _totals(teams, results, rules), among, rules, rng)
+    totals = _totals(teams, results, rules)
+    add_opponent_totals(totals, results)
+    return rank_from_totals(teams, totals, among, rules, rng)
 
 
 def rank_from_totals(

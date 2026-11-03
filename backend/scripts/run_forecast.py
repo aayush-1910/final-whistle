@@ -28,8 +28,9 @@ from app.models.data import load_match_records
 from app.models.poisson import fit_poisson
 from app.simulations.domestic import simulate_league
 from app.simulations.rules import load_rules
+from app.simulations.ucl import UCLForecast, simulate_ucl
 
-LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A"]
+LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A", "UCL"]
 MODEL_NAME, MODEL_VERSION = "poisson-montecarlo", "0.1.0"
 SHORT = {
     "champions_league": "UCL",
@@ -37,6 +38,16 @@ SHORT = {
     "conference_league": "UECL",
     "relegation_playoff": "Rel PO",
     "relegation": "Relegated",
+    "round_of_16": "Top 8",
+    "knockout_playoffs": "9-24",
+    "eliminated": "25-36",
+}
+ROUND_SHORT = {
+    "round_of_16": "R16",
+    "quarter_finals": "QF",
+    "semi_finals": "SF",
+    "final": "Final",
+    "winner": "Win",
 }
 
 
@@ -64,19 +75,39 @@ def main() -> None:
         for comp in args.competition or LEAGUES:
             rules = load_rules(comp, args.season)
             t0 = time.time()
-            f = simulate_league(recs, comp, args.season, model, rules, as_of,
-                                n_sims=args.sims, seed=args.seed)  # fmt: skip
+            if comp == "UCL":
+                f = simulate_ucl(recs, args.season, model, rules, as_of,
+                                 n_sims=args.sims, seed=args.seed)  # fmt: skip
+            else:
+                f = simulate_league(recs, comp, args.season, model, rules, as_of,
+                                    n_sims=args.sims, seed=args.seed)  # fmt: skip
             exp_pos = f.expected_position
             zones = [z.key for z in rules.zones if z.key != "champion"]
             print(f"--- {comp} {args.season}/{(args.season + 1) % 100:02d} "
                   f"({f.completed_matches} played, {len(f.matches)} to simulate, "
                   f"{time.time() - t0:.1f}s) ---")  # fmt: skip
-            header = f"{'':3}{'Team':18}{'Pts':>4}{'xPts':>6}{'xPos':>6}{'Title':>7}"
-            print(header + "".join(f"{SHORT.get(z, z[:10]):>11}" for z in zones))
-            for i, t in enumerate(sorted(f.team_ids, key=lambda x: exp_pos[x]), start=1):
+            is_ucl = isinstance(f, UCLForecast)
+            rounds = list(ROUND_SHORT) if is_ucl else []
+            first = (
+                "" if is_ucl else f"{'Title':>7}"
+            )  # UCL: P(1st in league phase) is not the title
+            header = f"{'':3}{'Team':18}{'Pts':>4}{'xPts':>6}{'xPos':>6}{first}"
+            print(
+                header
+                + "".join(f"{SHORT.get(z, z[:10]):>11}" for z in zones)
+                + "".join(f"{ROUND_SHORT[r]:>7}" for r in rounds)
+            )
+            order = sorted(f.team_ids, key=lambda x: exp_pos[x])
+            if isinstance(f, UCLForecast):
+                order = sorted(f.team_ids, key=lambda x: -f.round_probs["winner"][x])
+            for i, t in enumerate(order, start=1):
+                title = "" if is_ucl else f"{f.title_probs[t]:>7.1%}"
                 row = (f"{i:<3}{names[t][:17]:18}{f.current_points[t]:>4}"
-                       f"{f.expected_points[t]:>6.1f}{exp_pos[t]:>6.1f}{f.title_probs[t]:>7.1%}")  # fmt: skip
-                print(row + "".join(f"{f.zone_probs[z][t]:>11.1%}" for z in zones))
+                       f"{f.expected_points[t]:>6.1f}{exp_pos[t]:>6.1f}{title}")  # fmt: skip
+                row += "".join(f"{f.zone_probs[z][t]:>11.1%}" for z in zones)
+                if isinstance(f, UCLForecast):
+                    row += "".join(f"{f.round_probs[r][t]:>7.1%}" for r in rounds)
+                print(row)
             for note in f.notes:
                 print(f"  note: {note}")
             print(f"  rules: {rules.source_quality} source, verified {rules.verified_on}")

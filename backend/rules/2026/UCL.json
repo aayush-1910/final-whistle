@@ -1,0 +1,18 @@
+{
+  "competition_code": "UCL",
+  "season_start_year": 2026,
+  "team_count": 36,
+  "points_for_win": 3,
+  "points_for_draw": 1,
+  "tiebreakers": ["points", "goal_difference", "goals_for", "away_goals_for", "wins", "away_wins", "opponents_points", "opponents_goal_difference", "opponents_goals_for", "disciplinary_points", "uefa_coefficient"],
+  "zones": [
+    {"key": "round_of_16", "label": "Round of 16", "first_position": 1, "last_position": 8},
+    {"key": "knockout_playoffs", "label": "Knockout phase play-offs", "first_position": 9, "last_position": 24},
+    {"key": "eliminated", "label": "Eliminated", "first_position": 25, "last_position": 36}
+  ],
+  "playoff_positions": [],
+  "source": "https://documents.uefa.com/r/Regulations-of-the-UEFA-Champions-League-2026/27-Online (Arts. 17-22; in force 29 July 2026)",
+  "source_quality": "primary",
+  "verified_on": "2026-11-03",
+  "notes": "League phase ranking per Art. 17.03-17.04 and tiebreakers per Art. 18.01 (a-j). Disciplinary points and club coefficient are not in our data, so a tie that reaches them is broken by a seeded random draw. Knockout structure (Art. 19-22) is implemented in app/simulations/ucl.py; the bracket paths in Annex B are published only as an image and were taken from UEFA's written draw explainers, cross-checked against the 2024/25 draw."
+}

@@ -54,7 +54,7 @@ Most "predictions" online are vibes with a percentage sign stuck on. Final Whist
 - [x] Pull in fixtures, results and tables (6,400+ matches so far)
 - [x] Team strength ratings and match predictions (first version, still being tested)
 - [x] League season simulator (title, Europe and relegation odds; being tested)
-- [ ] Champions League simulator (league phase, then knockouts)
+- [x] Champions League simulator (league phase, then knockouts, built from UEFA's official rules)
 - [ ] Test predictions against past seasons
 - [ ] The dashboard 🎨
 - [ ] Go live 🚀

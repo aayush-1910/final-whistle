@@ -10,6 +10,7 @@ from typing import Any
 import psycopg
 
 from app.simulations.domestic import SeasonForecast
+from app.simulations.ucl import UCLForecast
 
 Conn = psycopg.Connection[Any]
 
@@ -70,14 +71,18 @@ def save_season_forecast(
         with conn.cursor() as cur:
             cur.executemany(
                 """insert into season_forecasts (model_run_id, team_id, current_points, played,
-                       expected_points, expected_position, position_probs, zone_probs)
-                   values (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)""",
+                       expected_points, expected_position, position_probs, zone_probs,
+                       round_probs)
+                   values (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)""",
                 [
                     (
                         run_id, t, forecast.current_points[t], forecast.played[t],
                         forecast.expected_points[t], exp_pos[t],
                         [float(p) for p in forecast.position_probs[i]],
                         json.dumps({k: v[t] for k, v in forecast.zone_probs.items()}),
+                        json.dumps({k: v[t] for k, v in forecast.round_probs.items()})
+                        if isinstance(forecast, UCLForecast)
+                        else None,
                     )
                     for i, t in enumerate(forecast.team_ids)
                 ],

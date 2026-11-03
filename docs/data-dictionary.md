@@ -119,6 +119,7 @@ verified against official competition regulations.
 | `schema_migrations` | Applied migrations with checksums |
 | `model_runs` (0003) | One forecast run: model, params, rules, data cutoff, seed, simulation count, git commit, `is_published` (default false) |
 | `season_forecasts` (0003) | Per run and team: current/expected points, expected position, `position_probs` array (index 1 = 1st), `zone_probs` JSON |
+| `season_forecasts.round_probs` (0004) | UCL only: probability of reaching the round of 16, quarter-finals, semi-finals, final, and of winning (`winner`) |
 | `match_forecasts` (0003) | Per run and remaining fixture: home/draw/away probabilities (DB-checked to sum to 1) and expected goals |
 
 Row-level security is enabled on every table with no policies, so Supabase's public REST roles
