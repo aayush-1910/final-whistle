@@ -98,3 +98,52 @@ def test_serie_a_2023_head_to_head(conn: psycopg.Connection[Any]) -> None:
     expected = ["Fiorentina", "Torino", "Napoli", "Genoa", "Monza", "Verona", "Lecce",
                 "Udinese", "Cagliari", "Empoli", "Frosinone"]  # fmt: skip
     assert names(conn, our_order(conn, "SERIE_A", 2023))[7:18] == expected
+
+
+def test_ucl_2025_knockout_replay(conn: psycopg.Connection[Any]) -> None:
+    """Replay the real 2025/26 knockout phase round by round (each round revealed only
+    after the previous one ended).  Every state must simulate, keep 16/8/4/2/1 clubs per
+    round, and after the final the real winner must have probability 1."""
+    from datetime import timedelta
+
+    from app.database import repository as repo
+    from app.domain.models import Stage
+    from app.models import config
+    from app.models.data import load_match_records
+    from app.models.poisson import fit_poisson
+    from app.simulations.ucl import KNOCKOUT_STAGES, round_sanity, simulate_ucl
+
+    recs = load_match_records(conn)
+    ko = [
+        f
+        for f in repo.load_fixtures(conn, repo.season_id(conn, "UCL", 2025))
+        if f.stage in KNOCKOUT_STAGES
+    ]
+    if len(ko) != 45:
+        pytest.skip("UCL 2025/26 knockout phase not fully ingested")
+    rules = replace(load_rules("UCL", 2026), season_start_year=2025)
+    order = [Stage.PLAYOFFS, Stage.LAST_16, Stage.QUARTER_FINALS, Stage.SEMI_FINALS, Stage.FINAL]
+    league_end = max(
+        r.kickoff_utc
+        for r in recs
+        if r.competition == "UCL" and r.season_year == 2025 and r.stage == "league_stage"
+    )
+    last = {s: max(f.kickoff_utc for f in ko if f.stage is s) for s in order}  # type: ignore[type-var]
+    first = {s: min(f.kickoff_utc for f in ko if f.stage is s) for s in order}  # type: ignore[type-var]
+    revealed_after = {
+        Stage.PLAYOFFS: league_end,
+        **{b: last[a] for a, b in zip(order, order[1:], strict=False)},
+    }
+    final = next(f for f in ko if f.stage is Stage.FINAL)
+    champion = final.winner_team_id or final.shootout_winner_team_id
+
+    for as_of in [first[s] - timedelta(hours=3) for s in order] + [
+        last[Stage.FINAL] + timedelta(days=1)
+    ]:
+        known = [f for f in ko if revealed_after[f.stage] < as_of]
+        model = fit_poisson(recs, as_of, config.POISSON)
+        f = simulate_ucl(recs, 2025, model, rules, as_of, n_sims=300, seed=1, knockout=known)
+        assert round_sanity(f) == pytest.approx(
+            {"round_of_16": 16, "quarter_finals": 8, "semi_finals": 4, "final": 2, "winner": 1}
+        )
+    assert f.round_probs["winner"][champion] == 1.0

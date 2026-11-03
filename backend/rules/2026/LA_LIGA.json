@@ -4,17 +4,50 @@
   "team_count": 20,
   "points_for_win": 3,
   "points_for_draw": 1,
-  "tiebreakers": ["points", "head_to_head_points", "head_to_head_goal_difference", "goal_difference", "goals_for", "disciplinary_points", "playoff"],
+  "tiebreakers": [
+    "points",
+    "head_to_head_points",
+    "head_to_head_goal_difference",
+    "goal_difference",
+    "goals_for",
+    "disciplinary_points",
+    "playoff"
+  ],
   "zones": [
-    {"key": "champion", "label": "Champions", "first_position": 1, "last_position": 1},
-    {"key": "champions_league", "label": "Champions League", "first_position": 1, "last_position": 4},
-    {"key": "europa_league", "label": "Europa League", "first_position": 5, "last_position": 5},
-    {"key": "conference_league", "label": "Conference League play-off", "first_position": 6, "last_position": 6},
-    {"key": "relegation", "label": "Relegation", "first_position": 18, "last_position": 20}
+    {
+      "key": "champion",
+      "label": "Champions",
+      "first_position": 1,
+      "last_position": 1
+    },
+    {
+      "key": "champions_league",
+      "label": "Champions League",
+      "first_position": 1,
+      "last_position": 4
+    },
+    {
+      "key": "europa_league",
+      "label": "Europa League",
+      "first_position": 5,
+      "last_position": 5
+    },
+    {
+      "key": "conference_league",
+      "label": "Conference League play-off",
+      "first_position": 6,
+      "last_position": 6
+    },
+    {
+      "key": "relegation",
+      "label": "Relegation",
+      "first_position": 18,
+      "last_position": 20
+    }
   ],
   "playoff_positions": [],
   "source": "https://en.wikipedia.org/wiki/2026%E2%80%9327_La_Liga (rules note, citing RFEF Reglamento General Art. 29, 26 June 2025)",
   "source_quality": "secondary",
   "verified_on": "2026-11-03",
-  "notes": "Fair-play points apply only when 3+ clubs are tied; we have no disciplinary data, so that step and the final play-off are approximated by a random draw. Copa del Rey winner and a possible extra Champions League place can shift European places (not simulated)."
+  "notes": "Fair-play points apply only when 3+ clubs are tied; we have no disciplinary data, so that step and the final play-off are approximated by a random draw. Copa del Rey winner and a possible extra Champions League place can shift European places (not simulated). Head-to-head-first order confirmed empirically: our engine reproduces published final tables (tests/integration/test_real_tables.py). The official regulation PDF could not be fetched automatically (RFEF blocks automated downloads)."
 }

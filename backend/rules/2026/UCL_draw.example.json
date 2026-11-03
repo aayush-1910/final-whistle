@@ -1,0 +1,11 @@
+{
+  "_instructions": "Copy to UCL_draw.json after a UEFA knockout draw and fill in what that draw decided. Use league-phase POSITIONS, not club names. Omit a key if that draw has not happened yet (the simulator then draws it at random, as the regulations allow). The values below are only an EXAMPLE of the format.",
+  "season_start_year": 2026,
+  "source": "https://www.uefa.com/uefachampionsleague/draws/ (draw of <date>)",
+  "verified_on": "YYYY-MM-DD",
+  "r16_opponent": {
+    "_meaning": "seed position (1-8) -> the SEEDED play-off position (9-16) whose tie winner it meets in the round of 16",
+    "1": 15, "2": 16, "3": 13, "4": 14, "5": 11, "6": 12, "7": 9, "8": 10
+  },
+  "silver_half": [1, 3, 5, 7]
+}

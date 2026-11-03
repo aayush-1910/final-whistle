@@ -102,3 +102,6 @@ scored once on 2025/26 + 2026/27 to date (2,060 matches).
 Poisson (decay 0.0019/day, L2 4.0, group priors on), no blend, `strength_sd` 0.15 for domestic
 leagues. The UCL simulator still uses fixed strengths; adding uncertainty there is a follow-up.
 Re-run both backtests before changing any of these, and bump the model version.
+
+**Update (v0.2.1, 2026-11-03):** `strength_sd` 0.15 also applied to the UCL simulator, for
+consistency. It is not separately backtested (one season of the 36-club format).

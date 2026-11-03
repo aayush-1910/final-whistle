@@ -22,6 +22,7 @@ from _bootstrap import bootstrap  # noqa: E402
 
 bootstrap()
 
+from app.database import repository as repo
 from app.database.connection import connect
 from app.database.forecasts import git_commit, save_season_forecast
 from app.models import config
@@ -29,7 +30,7 @@ from app.models.data import load_match_records
 from app.models.poisson import fit_poisson
 from app.simulations.domestic import simulate_league
 from app.simulations.rules import load_rules
-from app.simulations.ucl import UCLForecast, simulate_ucl
+from app.simulations.ucl import KNOCKOUT_STAGES, UCLForecast, load_draw, simulate_ucl
 
 LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A", "UCL"]
 MODEL_NAME, MODEL_VERSION = config.MODEL_NAME, config.MODEL_VERSION
@@ -77,8 +78,12 @@ def main() -> None:
             rules = load_rules(comp, args.season)
             t0 = time.time()
             if comp == "UCL":
+                knockout = [f for f in repo.load_fixtures(conn, repo.season_id(conn, "UCL", args.season))
+                            if f.stage in KNOCKOUT_STAGES]  # fmt: skip
                 f = simulate_ucl(recs, args.season, model, rules, as_of,
-                                 n_sims=args.sims, seed=args.seed)  # fmt: skip
+                                 n_sims=args.sims, seed=args.seed, knockout=knockout,
+                                 draw=load_draw(args.season),
+                                 strength_sd=config.STRENGTH_SD)  # fmt: skip
             else:
                 f = simulate_league(recs, comp, args.season, model, rules, as_of,
                                     n_sims=args.sims, seed=args.seed,
@@ -119,7 +124,7 @@ def main() -> None:
                     "poisson_fit": {"mu": model.mu, "home_advantage": model.home_advantage,
                                     "matches_used": model.matches_used,
                                     "group_priors": model.priors},
-                    "strength_sd": 0.0 if comp == "UCL" else config.STRENGTH_SD,
+                    "strength_sd": config.STRENGTH_SD,
                     "rules": {"tiebreakers": [t.value for t in rules.tiebreakers],
                               "playoff_positions": list(rules.playoff_positions),
                               "source": rules.source, "source_quality": rules.source_quality},

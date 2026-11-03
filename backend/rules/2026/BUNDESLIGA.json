@@ -4,18 +4,56 @@
   "team_count": 18,
   "points_for_win": 3,
   "points_for_draw": 1,
-  "tiebreakers": ["points", "goal_difference", "goals_for", "head_to_head_points", "head_to_head_away_goals_for", "away_goals_for", "playoff"],
+  "tiebreakers": [
+    "points",
+    "goal_difference",
+    "goals_for",
+    "head_to_head_goal_difference",
+    "head_to_head_away_goals_for",
+    "away_goals_for",
+    "playoff"
+  ],
   "zones": [
-    {"key": "champion", "label": "Champions", "first_position": 1, "last_position": 1},
-    {"key": "champions_league", "label": "Champions League", "first_position": 1, "last_position": 4},
-    {"key": "europa_league", "label": "Europa League", "first_position": 5, "last_position": 5},
-    {"key": "conference_league", "label": "Conference League play-off", "first_position": 6, "last_position": 6},
-    {"key": "relegation_playoff", "label": "Relegation play-off", "first_position": 16, "last_position": 16},
-    {"key": "relegation", "label": "Relegation", "first_position": 17, "last_position": 18}
+    {
+      "key": "champion",
+      "label": "Champions",
+      "first_position": 1,
+      "last_position": 1
+    },
+    {
+      "key": "champions_league",
+      "label": "Champions League",
+      "first_position": 1,
+      "last_position": 4
+    },
+    {
+      "key": "europa_league",
+      "label": "Europa League",
+      "first_position": 5,
+      "last_position": 5
+    },
+    {
+      "key": "conference_league",
+      "label": "Conference League play-off",
+      "first_position": 6,
+      "last_position": 6
+    },
+    {
+      "key": "relegation_playoff",
+      "label": "Relegation play-off",
+      "first_position": 16,
+      "last_position": 16
+    },
+    {
+      "key": "relegation",
+      "label": "Relegation",
+      "first_position": 17,
+      "last_position": 18
+    }
   ],
   "playoff_positions": [],
-  "source": "https://en.wikipedia.org/wiki/2026%E2%80%9327_Bundesliga (rules note, citing DFL Spielordnung (SpOL) §II.2, 4 August 2026)",
-  "source_quality": "secondary",
+  "source": "DFL Spielordnung (SpOL), Stand 06.03.2026, §2 Nr. 3 c): https://media.dfl.de/sites/2/2026/03/Spielordnung-SpOL-2026-03-06-Stand.pdf",
+  "source_quality": "primary",
   "verified_on": "2026-11-03",
-  "notes": "16th plays a two-legged relegation play-off against the 2. Bundesliga 3rd-placed club; its outcome is not simulated (shown as its own zone). DFB-Pokal winner can shift European places (not simulated)."
+  "notes": "SpOL §2 Nr. 3 c): 1) goal difference, 2) goals scored, 3) aggregate result of the two head-to-head matches (modelled as head-to-head goal difference), 4) away goals in the head-to-head, 5) all away goals, 6) play-off on a neutral ground (random draw here). §2 Nr. 3 d): an awarded match counts 2:0. 16th plays a two-legged relegation play-off against the 2. Bundesliga 3rd-placed club; its outcome is not simulated (shown as its own zone). DFB-Pokal winner can shift European places (not simulated)."
 }

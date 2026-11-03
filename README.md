@@ -917,7 +917,9 @@ Done so far:
 
 - Milestone 6: walk-forward backtesting (weekly refits, tuned on 2024/25, tested once on 2,060 later matches). Poisson beats Elo significantly and both beat base rates; tuning and blending gave no measurable gain on unseen data. The production config is v0.2.0 (`backend/app/models/config.py`): Poisson with learned priors for promoted/UCL-only clubs, plus team-strength uncertainty in season simulations. Results: `docs/backtest-report.md`, stored in `backtest_runs`; decision OD-005.
 
-**Next action:** Milestone 7: FastAPI endpoints and the dashboard, reading stored forecasts and backtest results. Before anything is published: verify the domestic rules from primary sources, and build UCL real-draw conditioning before late January 2027.
+- Pre-Milestone 7 fixes: EPL and Bundesliga rules verified against the official 2026/27 documents (this corrected the Bundesliga's head-to-head criterion to the aggregate score); UCL simulator now conditions on the real knockout draw and results (validated by replaying the real 2025/26 knockout phase) with an optional draw file; strength uncertainty extended to the UCL (model v0.2.1).
+
+**Next action:** Milestone 7: FastAPI endpoints for the project owner's dashboard design.
 
 ---
 

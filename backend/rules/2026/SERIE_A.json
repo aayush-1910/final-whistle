@@ -4,17 +4,52 @@
   "team_count": 20,
   "points_for_win": 3,
   "points_for_draw": 1,
-  "tiebreakers": ["points", "head_to_head_points", "head_to_head_goal_difference", "goal_difference", "goals_for", "unresolved"],
-  "zones": [
-    {"key": "champion", "label": "Champions", "first_position": 1, "last_position": 1},
-    {"key": "champions_league", "label": "Champions League", "first_position": 1, "last_position": 4},
-    {"key": "europa_league", "label": "Europa League", "first_position": 5, "last_position": 5},
-    {"key": "conference_league", "label": "Conference League play-off", "first_position": 6, "last_position": 6},
-    {"key": "relegation", "label": "Relegation", "first_position": 18, "last_position": 20}
+  "tiebreakers": [
+    "points",
+    "head_to_head_points",
+    "head_to_head_goal_difference",
+    "goal_difference",
+    "goals_for",
+    "unresolved"
   ],
-  "playoff_positions": [1, 17],
+  "zones": [
+    {
+      "key": "champion",
+      "label": "Champions",
+      "first_position": 1,
+      "last_position": 1
+    },
+    {
+      "key": "champions_league",
+      "label": "Champions League",
+      "first_position": 1,
+      "last_position": 4
+    },
+    {
+      "key": "europa_league",
+      "label": "Europa League",
+      "first_position": 5,
+      "last_position": 5
+    },
+    {
+      "key": "conference_league",
+      "label": "Conference League play-off",
+      "first_position": 6,
+      "last_position": 6
+    },
+    {
+      "key": "relegation",
+      "label": "Relegation",
+      "first_position": 18,
+      "last_position": 20
+    }
+  ],
+  "playoff_positions": [
+    1,
+    17
+  ],
   "source": "https://en.wikipedia.org/wiki/2026%E2%80%9327_Serie_A (rules note, citing legaseriea.it)",
   "source_quality": "secondary",
   "verified_on": "2026-11-03",
-  "notes": "End-of-season points ties for 1st or 17th are decided by a play-off (one leg for the title, two for 17th), not the tiebreakers, unless a club involved is a UEFA final participant. Modelled as a 50/50 play-off between the two clubs straddling the position; 3+ club ties there are approximated. Final criterion is a drawing of lots. Coppa Italia winner can shift European places (not simulated)."
+  "notes": "End-of-season points ties for 1st or 17th are decided by a play-off (one leg for the title, two for 17th), not the tiebreakers, unless a club involved is a UEFA final participant. Modelled as a 50/50 play-off between the two clubs straddling the position; 3+ club ties there are approximated. Final criterion is a drawing of lots. Coppa Italia winner can shift European places (not simulated). Head-to-head-first order confirmed empirically against the published 2023/24 table (tests/integration/test_real_tables.py). 2026/27 change (FIGC, per press reports): no play-off if a club involved plays in a UEFA final."
 }

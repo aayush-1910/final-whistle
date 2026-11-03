@@ -50,6 +50,17 @@ def get_competition(conn: Conn, code: str, provider: str) -> tuple[int, str]:
     return int(row[0]), str(row[1])
 
 
+def season_id(conn: Conn, competition_code: str, start_year: int) -> int:
+    row = conn.execute(
+        """select s.id from seasons s join competitions c on c.id = s.competition_id
+            where c.code = %s and s.start_year = %s""",
+        (competition_code, start_year),
+    ).fetchone()
+    if row is None:
+        raise NotFoundError(f"No season {competition_code} {start_year}")
+    return int(row[0])
+
+
 def upsert_season(conn: Conn, competition_id: int, season: Season) -> int:
     row = conn.execute(
         """insert into seasons (competition_id, start_year, start_date, end_date)

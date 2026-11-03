@@ -11,7 +11,7 @@ from __future__ import annotations
 from app.models.poisson import PoissonParams
 
 MODEL_NAME = "poisson-montecarlo"
-MODEL_VERSION = "0.2.0"
+MODEL_VERSION = "0.2.1"
 
 # Match model: independent Poisson; group priors for promoted / UCL-only clubs.
 # Beat Elo significantly on the test period (log loss 0.9812 vs 0.9908); the
@@ -21,5 +21,6 @@ POISSON = PoissonParams(decay_per_day=0.0019, l2_penalty=4.0, group_priors=True)
 # Season simulation: per-simulation uncertainty in club strength (log-goals sd).
 # Chosen on 2024/25; on 2025/26 it improved final-position RPS and top-4 Brier,
 # was slightly worse for title/relegation, i.e. roughly neutral overall, while
-# reducing overconfidence in the 70-90% range.  Domestic leagues only for now.
+# reducing overconfidence in the 70-90% range.  Also applied to the UCL since
+# v0.2.1 for consistency (not separately backtested: one season of the format).
 STRENGTH_SD = 0.15

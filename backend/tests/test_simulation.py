@@ -40,7 +40,9 @@ def rank(res: list[tuple[int, int, int, int]], r: LeagueRules, seed: int = 0) ->
 )
 def test_2026_rules_load(code: str, n: int) -> None:
     r = load_rules(code, 2026)
-    assert r.team_count == n and r.is_verified and r.source_quality == "secondary"
+    assert r.team_count == n and r.is_verified
+    expected_quality = "primary" if code in ("EPL", "BUNDESLIGA") else "secondary"
+    assert r.source_quality == expected_quality
     assert r.zone("champion") is not None and r.zone("relegation") is not None
 
 
@@ -263,3 +265,13 @@ def test_current_points_from_completed_only() -> None:
     )
     assert f.current_points == {1: 3, 2: 0, 3: 1, 4: 1}
     assert f.played == {1: 1, 2: 1, 3: 1, 4: 1}
+
+
+def test_bundesliga_head_to_head_is_aggregate_score_not_points() -> None:
+    # DFL SpOL §2 Nr. 3 c) 3): "Gesamtergebnis aus Hin- und Rückspiel im direkten Vergleich".
+    # A beat B 1-0, B beat A 3-0: equal head-to-head points, but B wins on aggregate (3-1).
+    res = [(1, 2, 1, 0), (2, 1, 3, 0)]
+    aggregate = rules([T.POINTS, T.HEAD_TO_HEAD_GOAL_DIFFERENCE, T.PLAYOFF], n=2)
+    points_only = rules([T.POINTS, T.HEAD_TO_HEAD_POINTS, T.PLAYOFF], n=2)
+    assert {tuple(rank(res, aggregate, seed=s)) for s in range(20)} == {(2, 1)}
+    assert {tuple(rank(res, points_only, seed=s)) for s in range(40)} == {(1, 2), (2, 1)}

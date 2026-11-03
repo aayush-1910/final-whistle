@@ -28,6 +28,7 @@ class MatchRecord:
     home_goals: int | None  # goals after 90 minutes; None if not played
     away_goals: int | None
     neutral: bool = False  # e.g. UCL final: no home advantage
+    stage: str | None = None  # Stage value, e.g. 'league_stage'; None if unknown
 
     @property
     def is_played(self) -> bool:
@@ -81,6 +82,7 @@ def load_match_records(conn: Any) -> list[MatchRecord]:
             home_goals=r[6],
             away_goals=r[7],
             neutral=r[8] == Stage.FINAL.value and r[2] == "UCL",
+            stage=r[8],
         )
         for r in rows
     ]

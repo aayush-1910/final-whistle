@@ -113,13 +113,21 @@ Reproduce: `backend/.venv/Scripts/python backend/scripts/preview_models.py`.
 |---|---|---|
 | EPL | GD, goals scored, head-to-head points, head-to-head away goals, play-off | |
 | La Liga | **head-to-head points**, head-to-head GD, GD, goals scored, fair play (3+ clubs), play-off | |
-| Bundesliga | GD, goals scored, head-to-head points, head-to-head away goals, away goals, play-off | 16th: relegation play-off (own zone, outcome not simulated) |
+| Bundesliga | GD, goals scored, **head-to-head aggregate score**, head-to-head away goals, away goals, play-off | 16th: relegation play-off (own zone, outcome not simulated) |
 | Serie A | **head-to-head points**, head-to-head GD, GD, goals scored, lots | Ties for **1st or 17th** settled by a **play-off** |
 
-**Source quality: secondary.** The rules were taken from the 2026/27 Wikipedia season pages,
-which cite the official regulations (Premier League, RFEF Art. 29, DFL SpOL §II.2, Lega Serie A).
-The official sites could not be read directly. Every rules file records `source_quality:
-"secondary"`; publishing should require these to be checked against the primary documents.
+**Sources (checked 2026-11-03):**
+
+| League | Source | Quality |
+|---|---|---|
+| EPL | Premier League Handbook 2026/27, Rules C.2, C.4–C.7, C.17 (official PDF, read directly) | **primary** |
+| Bundesliga | DFL Spielordnung, Stand 06.03.2026, §2 Nr. 3 c) (official PDF, read directly) | **primary** |
+| La Liga | 2026/27 Wikipedia season page citing RFEF regulations; RFEF blocks automated downloads | secondary, **confirmed empirically** by reproducing published final tables incl. a 3-club head-to-head |
+| Serie A | 2026/27 Wikipedia season page citing Lega Serie A, plus press on the 2026/27 FIGC rule change | secondary, confirmed empirically against the published 2023/24 table |
+
+Reading the DFL text corrected one rule: the Bundesliga's third criterion is the **aggregate score
+of the two head-to-head matches** ("Gesamtergebnis aus Hin- und Rückspiel im direkten Vergleich"),
+not head-to-head points.
 
 Zones are **by league position only**. Domestic cup winners and any extra Champions League
 place (from the UEFA association coefficient) can shift European places at season end. These
@@ -182,10 +190,25 @@ correct play-off pairings, round-of-16 opponents, slot inheritance, second-leg h
 clubs from the same seeded pair can only meet in the final. Expected clubs per round are exactly
 16 / 8 / 4 / 2 / 1.
 
-**Scope limit.** Supported only while no knockout fixtures exist in the data (today: league
-phase, matchday 4). Once the play-off draw is made (late January 2027), the simulator must
-condition on the real draw and on played knockout legs. **This must be built before then.**
-Until it is, the simulator refuses to run instead of producing a wrong bracket.
+**Conditioning on the real knockout phase** (built 2026-11-03):
+
+- Published knockout fixtures fix the real pairings. Legs played before the cutoff count with
+  their real score (incl. extra time), and a level tie uses the real shoot-out winner. A
+  half-played tie is simulated from its real first-leg score.
+- Bracket decisions that the provider only reveals in later rounds (which play-off winner meets
+  which seed; which half of the bracket each seed is in) are **deduced from published
+  quarter-final/semi-final ties** where possible, or read from a **draw file**
+  `backend/rules/<season>/UCL_draw.json` (template: `UCL_draw.example.json`). Otherwise they are
+  drawn at random, as the regulations allow.
+- A round is used only when all of its ties are published. Any contradiction between data, draw
+  file and Article 19 aborts the run instead of producing a wrong bracket.
+- Validated by replaying the real 2025/26 knockout phase round by round
+  (`tests/integration/test_real_tables.py`): every intermediate state simulates with exactly
+  16/8/4/2/1 clubs per round, and after the final the real winner (PSG) has probability 1.
+
+**Strength uncertainty** (`strength_sd` 0.15) is applied to the UCL too since model v0.2.1, for
+consistency with the domestic leagues. It is not separately backtested, because only one season
+of this format exists.
 
 ## 5. Tiebreak engine validation on real tables
 
@@ -236,8 +259,10 @@ promoted / UCL-only clubs, `strength_sd` 0.15 (domestic leagues).
 **What changed in the forecasts** (2026-11-03, v0.1.0 → v0.2.0): Arsenal EPL title 84% → 72%,
 Bayern 95% → 86%, Inter 59% → 47%; promoted Hull City relegation 10% → 21%.
 
+**Since then (v0.2.1, 2026-11-03):** strength uncertainty extended to the UCL; UCL knockout
+conditioning built; EPL and Bundesliga rules verified from primary sources.
+
 **Still open.**
-- The UCL simulator uses fixed strengths (no `strength_sd` yet).
-- The UCL knockout phase must condition on the real draw before late January 2027.
-- League rules are from a secondary source and should be checked against the primary documents.
+- La Liga and Serie A rules remain secondary-sourced (empirically confirmed); a human check of the
+  official PDFs is recommended before publishing.
 - With only ~1.3 test seasons, re-run the backtests as each season completes.
