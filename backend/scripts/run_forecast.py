@@ -17,7 +17,10 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _bootstrap import bootstrap  # noqa: E402
+
+bootstrap()
 
 from app.database.connection import connect
 from app.database.forecasts import git_commit, save_season_forecast
