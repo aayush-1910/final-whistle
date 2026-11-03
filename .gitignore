@@ -48,3 +48,6 @@ desktop.ini
 raw_responses/
 data_cache/
 
+
+# Generated backtest JSON (the stored copy lives in the backtest_runs table)
+backend/reports/

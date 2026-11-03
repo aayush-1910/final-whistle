@@ -98,3 +98,29 @@ def save_season_forecast(
                 ],
             )  # fmt: skip
     return run_id
+
+
+def save_backtest(
+    conn: Conn,
+    *,
+    kind: str,
+    model_name: str,
+    model_version: str,
+    params: dict[str, Any],
+    tuning_window: dict[str, str],
+    test_window: dict[str, str],
+    metrics: dict[str, Any],
+    code_version: str | None,
+) -> int:
+    row = conn.execute(
+        """insert into backtest_runs (kind, model_name, model_version, params, tuning_window,
+               test_window, metrics, code_version)
+           values (%s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s) returning id""",
+        (
+            kind, model_name, model_version, json.dumps(params, default=str),
+            json.dumps(tuning_window), json.dumps(test_window),
+            json.dumps(metrics, default=str), code_version,
+        ),
+    ).fetchone()  # fmt: skip
+    assert row is not None
+    return int(row[0])

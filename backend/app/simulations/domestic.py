@@ -107,7 +107,12 @@ def simulate_league(
     *,
     n_sims: int = 10_000,
     seed: int = 0,
+    strength_sd: float = 0.0,
 ) -> SeasonForecast:
+    """``strength_sd`` > 0 draws, for each simulated season, a random shift of every
+    club's attack and defence (normal, sd on the log-goals scale).  This represents
+    uncertainty about how good the clubs really are, which fixed strengths ignore.
+    0 reproduces the fixed-strength behaviour exactly."""
     if model.as_of > as_of:
         raise SimulationError("Model was fitted with a later cutoff than as_of (leakage)")
     if (rules.competition_code, rules.season_start_year) != (competition, season_year):
@@ -180,15 +185,26 @@ def simulate_league(
     lam_h = np.empty(len(remaining))
     lam_a = np.empty(len(remaining))
     for j, (fid, h, a, neutral) in enumerate(remaining):
-        lh, la = model.expected_goals(h, a, neutral=neutral)
+        lh, la = model.expected_goals(h, a, neutral=neutral, competition=competition)
         lam_h[j], lam_a[j] = lh, la
-        ph, pd, pa = outcome_probabilities(model.score_matrix(h, a, neutral=neutral))
+        mat = model.score_matrix(h, a, neutral=neutral, competition=competition)
+        ph, pd, pa = outcome_probabilities(mat)
         matches.append(MatchForecast(fid, h, a, ph, pd, pa, lh, la))
 
     rng = np.random.default_rng(seed)
     r_n = len(remaining)
-    gh = rng.poisson(lam_h, size=(n_sims, r_n)).astype(np.int64)
-    ga = rng.poisson(lam_a, size=(n_sims, r_n)).astype(np.int64)
+    if strength_sd > 0:
+        z_att = rng.normal(0.0, strength_sd, size=(n_sims, n_t))
+        z_def = rng.normal(0.0, strength_sd, size=(n_sims, n_t))
+        hi = np.array([idx[h] for _, h, _, _ in remaining], dtype=np.int64)
+        ai = np.array([idx[a] for _, _, a, _ in remaining], dtype=np.int64)
+        lam_h_s = lam_h * np.exp(z_att[:, hi] - z_def[:, ai])
+        lam_a_s = lam_a * np.exp(z_att[:, ai] - z_def[:, hi])
+        gh = rng.poisson(lam_h_s).astype(np.int64)
+        ga = rng.poisson(lam_a_s).astype(np.int64)
+    else:
+        gh = rng.poisson(lam_h, size=(n_sims, r_n)).astype(np.int64)
+        ga = rng.poisson(lam_a, size=(n_sims, r_n)).astype(np.int64)
     home_m = np.zeros((r_n, n_t), dtype=np.int64)
     away_m = np.zeros((r_n, n_t), dtype=np.int64)
     for j, (_, h, a, _) in enumerate(remaining):

@@ -101,7 +101,9 @@ class _Knockout:
     def lam(self, home: int, away: int, neutral: bool = False) -> tuple[float, float]:
         key = (home, away, neutral)
         if key not in self._lam:
-            self._lam[key] = self.model.expected_goals(home, away, neutral=neutral)
+            self._lam[key] = self.model.expected_goals(
+                home, away, neutral=neutral, competition="UCL"
+            )
         return self._lam[key]
 
     def _goals(
@@ -238,7 +240,7 @@ def simulate_ucl(
     all_m = completed + remaining
     n_c = len(completed)
     lam = np.array(
-        [model.expected_goals(r.home_team_id, r.away_team_id) for r in remaining]
+        [model.expected_goals(r.home_team_id, r.away_team_id, competition="UCL") for r in remaining]
     ).reshape(-1, 2)
     gh = np.empty((n_sims, len(all_m)), dtype=np.int64)
     ga = np.empty_like(gh)
@@ -295,8 +297,9 @@ def simulate_ucl(
     }
     matches = []
     for r in remaining:
-        lh, la = model.expected_goals(r.home_team_id, r.away_team_id)
-        ph, pd, pa = outcome_probabilities(model.score_matrix(r.home_team_id, r.away_team_id))
+        lh, la = model.expected_goals(r.home_team_id, r.away_team_id, competition="UCL")
+        mat = model.score_matrix(r.home_team_id, r.away_team_id, competition="UCL")
+        ph, pd, pa = outcome_probabilities(mat)
         matches.append(
             MatchForecast(r.fixture_id, r.home_team_id, r.away_team_id, ph, pd, pa, lh, la)
         )

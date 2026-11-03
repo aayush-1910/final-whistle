@@ -24,6 +24,7 @@ bootstrap()
 
 from app.database.connection import connect
 from app.database.forecasts import git_commit, save_season_forecast
+from app.models import config
 from app.models.data import load_match_records
 from app.models.poisson import fit_poisson
 from app.simulations.domestic import simulate_league
@@ -31,7 +32,7 @@ from app.simulations.rules import load_rules
 from app.simulations.ucl import UCLForecast, simulate_ucl
 
 LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A", "UCL"]
-MODEL_NAME, MODEL_VERSION = "poisson-montecarlo", "0.1.0"
+MODEL_NAME, MODEL_VERSION = config.MODEL_NAME, config.MODEL_VERSION
 SHORT = {
     "champions_league": "UCL",
     "europa_league": "UEL",
@@ -64,7 +65,7 @@ def main() -> None:
     with connect() as conn:
         recs = load_match_records(conn)
         names = dict(conn.execute("select id, coalesce(short_name, name) from teams").fetchall())
-        model = fit_poisson(recs, as_of)
+        model = fit_poisson(recs, as_of, config.POISSON)
         code = git_commit()
         print("=" * 78)
         print(" DEVELOPER OUTPUT: model NOT validated. These are not published forecasts.")
@@ -80,7 +81,8 @@ def main() -> None:
                                  n_sims=args.sims, seed=args.seed)  # fmt: skip
             else:
                 f = simulate_league(recs, comp, args.season, model, rules, as_of,
-                                    n_sims=args.sims, seed=args.seed)  # fmt: skip
+                                    n_sims=args.sims, seed=args.seed,
+                                    strength_sd=config.STRENGTH_SD)  # fmt: skip
             exp_pos = f.expected_position
             zones = [z.key for z in rules.zones if z.key != "champion"]
             print(f"--- {comp} {args.season}/{(args.season + 1) % 100:02d} "
@@ -115,7 +117,9 @@ def main() -> None:
                 params = {
                     "poisson": model.params.to_dict(),
                     "poisson_fit": {"mu": model.mu, "home_advantage": model.home_advantage,
-                                    "matches_used": model.matches_used},
+                                    "matches_used": model.matches_used,
+                                    "group_priors": model.priors},
+                    "strength_sd": 0.0 if comp == "UCL" else config.STRENGTH_SD,
                     "rules": {"tiebreakers": [t.value for t in rules.tiebreakers],
                               "playoff_positions": list(rules.playoff_positions),
                               "source": rules.source, "source_quality": rules.source_quality},
