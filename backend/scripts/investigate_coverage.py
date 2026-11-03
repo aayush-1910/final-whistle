@@ -24,14 +24,14 @@ from datetime import datetime
 from pathlib import Path
 
 # Add the backend app to the path
-_SCRIPT_DIR = Path(__file__).resolve().parent          # backend/scripts/
-_BACKEND_DIR = _SCRIPT_DIR.parent                      # backend/
-_ROOT_DIR = _BACKEND_DIR.parent                        # final-whistle/
+_SCRIPT_DIR = Path(__file__).resolve().parent  # backend/scripts/
+_BACKEND_DIR = _SCRIPT_DIR.parent  # backend/
+_ROOT_DIR = _BACKEND_DIR.parent  # final-whistle/
 
 sys.path.insert(0, str(_BACKEND_DIR))
 
-from dotenv import load_dotenv
 import httpx
+from dotenv import load_dotenv
 
 # ---------------------------------------------------------------------------
 # Load environment — try backend/.env then root .env
@@ -163,7 +163,9 @@ def check_league_metadata(code: str, comp: dict) -> dict:
 
     print(f"  API name: {info['api_name']}")
     print(f"  Type: {info['type']}")
-    print(f"  Seasons available: {info['total_seasons']} ({info['oldest_season']}–{info['newest_season']})")
+    print(
+        f"  Seasons available: {info['total_seasons']} ({info['oldest_season']}–{info['newest_season']})"
+    )
     print(f"  2026/27 season available: {'✅ YES' if has_target else '❌ NO'}")
 
     return info
@@ -173,11 +175,7 @@ def check_season_teams(league_id: int, season: int) -> dict:
     """Check teams for a specific season."""
     data = api_get("/teams", {"league": league_id, "season": season})
     results = data.get("response", [])
-    teams = [
-        {"id": r["team"]["id"], "name": r["team"]["name"]}
-        for r in results
-        if r.get("team")
-    ]
+    teams = [{"id": r["team"]["id"], "name": r["team"]["name"]} for r in results if r.get("team")]
 
     info = {
         "team_count": len(teams),
@@ -236,8 +234,14 @@ def check_season_fixtures(league_id: int, season: int) -> dict:
     # Check field coverage on sample fixture
     if sample_fixture:
         fx_fields = list(sample_fixture.get("fixture", {}).keys())
-        team_fields = list(sample_fixture.get("teams", {}).get("home", {}).keys()) if sample_fixture.get("teams") else []
-        score_fields = list(sample_fixture.get("score", {}).keys()) if sample_fixture.get("score") else []
+        team_fields = (
+            list(sample_fixture.get("teams", {}).get("home", {}).keys())
+            if sample_fixture.get("teams")
+            else []
+        )
+        score_fields = (
+            list(sample_fixture.get("score", {}).keys()) if sample_fixture.get("score") else []
+        )
         info["sample_fixture_fields"] = fx_fields
         info["sample_team_fields"] = team_fields
         info["sample_score_fields"] = score_fields
@@ -267,7 +271,7 @@ def check_standings(league_id: int, season: int) -> dict:
         "teams": total_teams,
     }
 
-    print(f"  Standings available: ✅ YES")
+    print("  Standings available: ✅ YES")
     print(f"  Groups/tables: {info['groups']}")
     print(f"  Teams in standings: {info['teams']}")
 
@@ -276,9 +280,11 @@ def check_standings(league_id: int, season: int) -> dict:
         top3 = standings_groups[0][:3]
         for entry in top3:
             team = entry.get("team", {})
-            print(f"    {entry.get('rank', '?')}. {team.get('name', '?')} — "
-                  f"Pts: {entry.get('points', '?')}, "
-                  f"P: {entry.get('all', {}).get('played', '?')}")
+            print(
+                f"    {entry.get('rank', '?')}. {team.get('name', '?')} — "
+                f"Pts: {entry.get('points', '?')}, "
+                f"P: {entry.get('all', {}).get('played', '?')}"
+            )
 
     return info
 
@@ -322,9 +328,13 @@ def main() -> None:
         result["metadata"] = check_league_metadata(code, comp)
         log(f"- **API name:** {result['metadata'].get('api_name', '?')}")
         log(f"- **Type:** {result['metadata'].get('type', '?')}")
-        log(f"- **Seasons available:** {result['metadata'].get('total_seasons', '?')} "
-            f"({result['metadata'].get('oldest_season', '?')}–{result['metadata'].get('newest_season', '?')})")
-        log(f"- **2026/27 season present:** {'✅ Yes' if result['metadata'].get('has_2026_season') else '❌ No'}")
+        log(
+            f"- **Seasons available:** {result['metadata'].get('total_seasons', '?')} "
+            f"({result['metadata'].get('oldest_season', '?')}–{result['metadata'].get('newest_season', '?')})"
+        )
+        log(
+            f"- **2026/27 season present:** {'✅ Yes' if result['metadata'].get('has_2026_season') else '❌ No'}"
+        )
 
         # Teams for 2026
         if result["metadata"].get("has_2026_season"):
@@ -340,11 +350,13 @@ def main() -> None:
 
             print(f"\n--- Standings (season {TARGET_SEASON}) ---")
             result["standings"] = check_standings(comp["id"], TARGET_SEASON)
-            log(f"- **Standings available:** {'✅ Yes' if result['standings'].get('available') else '❌ No'}")
+            log(
+                f"- **Standings available:** {'✅ Yes' if result['standings'].get('available') else '❌ No'}"
+            )
             if result["standings"].get("available"):
                 log(f"- **Teams in standings:** {result['standings'].get('teams', '?')}")
         else:
-            log(f"- ⚠ **2026/27 season not found — skipping teams/fixtures/standings checks**")
+            log("- ⚠ **2026/27 season not found — skipping teams/fixtures/standings checks**")
 
         # Historical depth: check a few older seasons
         available_seasons = result["metadata"].get("all_seasons", [])
@@ -385,7 +397,9 @@ def main() -> None:
     # 4. Quota warning
     log("\n## Quota Impact\n")
     log(f"This investigation used **{request_count}** of the daily 100-request budget.")
-    remaining_str = f"{100 - request_count}" if isinstance(account.get("daily_limit"), int) else "unknown"
+    remaining_str = (
+        f"{100 - request_count}" if isinstance(account.get("daily_limit"), int) else "unknown"
+    )
     log(f"Estimated remaining today: ~{remaining_str}")
     log("")
 

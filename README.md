@@ -479,6 +479,35 @@ No page should display fabricated sample predictions as though they were live. P
 
 ## 10. Local development setup
 
+### Running locally
+
+One-time setup (Windows, Git Bash; on PowerShell use `.venv\Scripts\activate`):
+
+```bash
+# Backend
+cd backend
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+Copy `.env.example` to `.env` in the project root and fill in the keys.
+
+Day-to-day commands:
+
+| Task | Command (from the folder shown) |
+|---|---|
+| Start backend (http://localhost:8000) | `backend/`: `.venv/Scripts/python -m uvicorn app.main:app --reload` |
+| Start frontend (http://localhost:5173) | `frontend/`: `npm run dev` |
+| Backend tests | `backend/`: `.venv/Scripts/python -m pytest` |
+| Backend lint / format / types | `backend/`: `.venv/Scripts/ruff check .` · `.venv/Scripts/ruff format .` · `.venv/Scripts/mypy app` |
+| Frontend lint / build | `frontend/`: `npm run lint` · `npm run build` |
+
+The frontend dev server forwards `/api/*` to the backend, so the browser never talks to a data provider directly.
+
 ### Required software
 
 Install these before implementation:
@@ -866,15 +895,16 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 0 complete → starting Milestone 1.**
+**Current phase: Milestone 1 complete → next is Milestone 2 (data ingestion).**
 
 Done so far:
 
 - Backend skeleton (FastAPI health endpoint, config validation, domain models, provider clients, tests).
 - API-Football Free: **no 2026/27 access**, history 2022–2024 only. See `docs/milestone-0-coverage-report.md`.
 - **Primary provider: football-data.org (free tier).** It fully covers all five competitions for 2026/27, and history is available for 2023–2025. See `docs/milestone-0-football-data-org-report.md` and `docs/decisions.md` OD-001.
+- Milestone 1: Git repo, backend virtualenv, lint/format/type/test tooling, validated domain contracts (`backend/app/domain/models.py`, documented in `docs/data-dictionary.md`), and a React + Vite + Tailwind frontend shell connected to the backend.
 
-**Next action:** Milestone 1 — initialise Git, install the dev tools (ruff, mypy), and define the canonical data contracts.
+**Next action:** Milestone 2 — ingest fixtures, results and standings from football-data.org into the domain models, then design the database schema.
 
 ---
 

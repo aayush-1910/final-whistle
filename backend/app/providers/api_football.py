@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 # These MUST be verified against real API responses during Milestone 0.
 # ---------------------------------------------------------------------------
 COMPETITION_IDS: dict[str, int] = {
-    "EPL": 39,       # English Premier League
-    "LA_LIGA": 140,   # La Liga
-    "BUNDESLIGA": 78, # Bundesliga
-    "SERIE_A": 135,   # Serie A
-    "UCL": 2,         # UEFA Champions League
+    "EPL": 39,  # English Premier League
+    "LA_LIGA": 140,  # La Liga
+    "BUNDESLIGA": 78,  # Bundesliga
+    "SERIE_A": 135,  # Serie A
+    "UCL": 2,  # UEFA Champions League
 }
 
 
@@ -55,7 +55,7 @@ class APIFootballClient:
         response = self._client.get(endpoint, params=params)
         response.raise_for_status()
 
-        data = response.json()
+        data: dict[str, Any] = response.json()
 
         # Log remaining quota from response headers (API-Sports convention)
         remaining = response.headers.get("x-ratelimit-requests-remaining")
@@ -75,7 +75,9 @@ class APIFootballClient:
         """Return account status including subscription and quota info."""
         return self._get("/status")
 
-    def get_leagues(self, league_id: int | None = None, season: int | None = None) -> dict[str, Any]:
+    def get_leagues(
+        self, league_id: int | None = None, season: int | None = None
+    ) -> dict[str, Any]:
         """Fetch league/competition metadata."""
         params: dict[str, Any] = {}
         if league_id is not None:
@@ -121,9 +123,8 @@ class APIFootballClient:
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> "APIFootballClient":
+    def __enter__(self) -> APIFootballClient:
         return self
 
     def __exit__(self, *args: Any) -> None:
         self.close()
-

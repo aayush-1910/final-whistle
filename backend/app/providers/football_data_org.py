@@ -45,9 +45,9 @@ COMPETITION_CODES: dict[str, str] = {
 # Status values verbatim from the Match resource docs.
 STATUS_MAP: dict[str, FixtureStatus] = {
     "SCHEDULED": FixtureStatus.SCHEDULED,
-    "TIMED": FixtureStatus.SCHEDULED,      # scheduled with a confirmed kickoff time
+    "TIMED": FixtureStatus.SCHEDULED,  # scheduled with a confirmed kickoff time
     "IN_PLAY": FixtureStatus.IN_PROGRESS,
-    "PAUSED": FixtureStatus.IN_PROGRESS,   # e.g. half-time
+    "PAUSED": FixtureStatus.IN_PROGRESS,  # e.g. half-time
     "FINISHED": FixtureStatus.FINISHED,
     "SUSPENDED": FixtureStatus.SUSPENDED,
     "POSTPONED": FixtureStatus.POSTPONED,

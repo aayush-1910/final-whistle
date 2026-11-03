@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 # load_dotenv never overrides an already-set variable, so root wins.
 # ---------------------------------------------------------------------------
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
-_ROOT_DIR = _BACKEND_DIR.parent                                # final-whistle/
+_ROOT_DIR = _BACKEND_DIR.parent  # final-whistle/
 
 for _env_file in (_ROOT_DIR / ".env", _BACKEND_DIR / ".env"):
     if _env_file.is_file():
@@ -60,26 +60,18 @@ class Settings:
     api_football_base_url: str = "https://v3.football.api-sports.io"
 
     # football-data.org (separate service, separate token — see OD-001)
-    football_data_org_key: str = field(
-        default_factory=lambda: _optional("FOOTBALL_DATA_ORG_KEY")
-    )
+    football_data_org_key: str = field(default_factory=lambda: _optional("FOOTBALL_DATA_ORG_KEY"))
 
     # Supabase
     supabase_url: str = field(default_factory=lambda: _require("SUPABASE_URL"))
     supabase_service_role_key: str = field(
         default_factory=lambda: _require("SUPABASE_SERVICE_ROLE_KEY")
     )
-    supabase_anon_key: str = field(
-        default_factory=lambda: _optional("SUPABASE_ANON_KEY")
-    )
+    supabase_anon_key: str = field(default_factory=lambda: _optional("SUPABASE_ANON_KEY"))
 
     # Application
-    app_env: str = field(
-        default_factory=lambda: _optional("APP_ENV", "development")
-    )
-    log_level: str = field(
-        default_factory=lambda: _optional("LOG_LEVEL", "INFO")
-    )
+    app_env: str = field(default_factory=lambda: _optional("APP_ENV", "development"))
+    log_level: str = field(default_factory=lambda: _optional("LOG_LEVEL", "INFO"))
 
     @property
     def is_production(self) -> bool:
@@ -88,4 +80,3 @@ class Settings:
 
 # Singleton — import this from other modules.
 settings = Settings()
-

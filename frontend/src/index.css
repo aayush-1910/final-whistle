@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pitch-950: #0b1220;
+  --color-pitch-900: #111a2e;
+  --color-pitch-800: #1a2540;
+  --color-accent: #4f9cf9;
+}
+
+body {
+  @apply bg-pitch-950 text-slate-100 antialiased;
+}

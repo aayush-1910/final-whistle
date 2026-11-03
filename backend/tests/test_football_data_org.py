@@ -43,8 +43,17 @@ def test_unknown_status_never_guessed(raw: str | None) -> None:
 
 
 def test_all_documented_statuses_mapped() -> None:
-    documented = {"SCHEDULED", "TIMED", "IN_PLAY", "PAUSED", "FINISHED",
-                  "SUSPENDED", "POSTPONED", "CANCELLED", "AWARDED"}
+    documented = {
+        "SCHEDULED",
+        "TIMED",
+        "IN_PLAY",
+        "PAUSED",
+        "FINISHED",
+        "SUSPENDED",
+        "POSTPONED",
+        "CANCELLED",
+        "AWARDED",
+    }
     assert set(STATUS_MAP) == documented
 
 

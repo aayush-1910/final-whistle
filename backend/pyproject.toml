@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Football analytics and season-forecasting engine"
 requires-python = ">=3.12"
 
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
@@ -14,6 +15,10 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# One-off investigation scripts: must edit sys.path before importing app; long report strings.
+"scripts/*" = ["E402", "E501"]
 
 [tool.mypy]
 python_version = "3.12"
