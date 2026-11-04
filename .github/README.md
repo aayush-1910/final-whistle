@@ -58,6 +58,7 @@ Most "predictions" online are vibes with a percentage sign stuck on. Final Whist
 - [x] Test predictions against past seasons (they beat simple baselines; full report in `docs/backtest-report.md`)
 - [x] Data API for the dashboard
 - [x] The dashboard 🎨
+- [x] Live online, refreshed daily 🚀
 - [ ] Go live 🚀
 
 ## 🔧 Under the hood

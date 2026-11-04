@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 8 (deployment) prepared → waiting for the owner's hosting choice (OD-006).**
+**Current phase: V1 complete and live (Milestone 8 done, 2026-11-04).**
 
 Done so far:
 
@@ -923,9 +923,15 @@ Done so far:
 
 - Milestone 7 (dashboard): React dashboard built from the project owner's design: Overview, Competitions, Match Predictor, UCL Simulator, Team Explorer, Model Intelligence and Data Centre, with search (Ctrl K). Shows published forecasts only, with model version and data cutoff next to every probability. Matchday-by-matchday history comes from historical backfill runs (`backend/scripts/backfill_forecasts.py`, flagged `is_backfill`, using only data before each cutoff). Club crests and competition emblems are provider URLs.
 
-- Milestone 8 (prepared): one-command refresh `backend/scripts/refresh.py` (import, re-forecast what changed, publish via the quality gates; per-step report, non-zero exit on failure), daily GitHub Actions schedule (OD-003), CI workflow, API container (`backend/Dockerfile`), JSON logs, CORS from settings, production secrets reduced to `DATABASE_URL` + `FOOTBALL_DATA_ORG_KEY`. Runbook: `docs/deployment.md`.
+- Milestone 8 (live 2026-11-04): one-command refresh `backend/scripts/refresh.py` (import, re-forecast what changed, publish via the quality gates; per-step report, non-zero exit on failure), daily GitHub Actions schedule (OD-003), CI workflow, API container (`backend/Dockerfile`), JSON logs, CORS from settings, production secrets reduced to `DATABASE_URL` + `FOOTBALL_DATA_ORG_KEY`. Runbook: `docs/deployment.md`.
 
-**Next action:** the owner chooses hosting (OD-006) and connects the accounts; then deploy and verify. Trophy and stadium artwork to be added when the owner supplies the files.
+  Hosting (OD-006): dashboard on Vercel, API on Render free (https://final-whistle-api.onrender.com),
+  daily refresh on GitHub Actions. First automatic refresh imported 9 UCL results, re-forecast
+  and published all five competitions.
+
+**Next action:** run the season (daily refresh is automatic). Open items: trophy and stadium
+artwork when the owner supplies the files; UCL draw file after the round-of-16 draw (late Feb
+2027); rules files for 2027/28 before next season.
 
 ---
 
