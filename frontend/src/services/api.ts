@@ -258,6 +258,10 @@ export class ApiError extends Error {
   }
 }
 
+// Where the API lives. Empty = same origin (the Vite dev proxy locally). In production set
+// VITE_API_BASE at build time, e.g. https://final-whistle-api.onrender.com
+const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '')
+
 // Small in-memory cache: pages share data (e.g. forecasts) without refetching.
 const cache = new Map<string, { at: number; promise: Promise<unknown> }>()
 const TTL_MS = 60_000
@@ -265,7 +269,7 @@ const TTL_MS = 60_000
 export function get<T>(path: string, { fresh = false } = {}): Promise<T> {
   const hit = cache.get(path)
   if (!fresh && hit && Date.now() - hit.at < TTL_MS) return hit.promise as Promise<T>
-  const promise = fetch(`/api/v1${path}`).then(async (res) => {
+  const promise = fetch(`${API_BASE}/api/v1${path}`).then(async (res) => {
     if (!res.ok) {
       let detail = `HTTP ${res.status}`
       try {

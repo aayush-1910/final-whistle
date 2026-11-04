@@ -55,23 +55,35 @@ def _optional(name: str, default: str = "") -> str:
 class Settings:
     """Immutable application settings loaded once at import time."""
 
-    # Football data provider
-    api_football_key: str = field(default_factory=lambda: _require("API_FOOTBALL_KEY"))
+    # API-Football: evaluated and rejected (OD-001); kept optional for the coverage scripts.
+    api_football_key: str = field(default_factory=lambda: _optional("API_FOOTBALL_KEY"))
     api_football_base_url: str = "https://v3.football.api-sports.io"
 
     # football-data.org (separate service, separate token — see OD-001)
     football_data_org_key: str = field(default_factory=lambda: _optional("FOOTBALL_DATA_ORG_KEY"))
 
-    # Supabase
-    supabase_url: str = field(default_factory=lambda: _require("SUPABASE_URL"))
+    # Supabase.  The app talks to Postgres directly (DATABASE_URL, or SUPABASE_URL +
+    # SUPABASE_DB_PASSWORD; see app/database/connection.py).  The service-role key is not
+    # used by any code path, so production hosts should not be given it.
+    supabase_url: str = field(default_factory=lambda: _optional("SUPABASE_URL"))
     supabase_service_role_key: str = field(
-        default_factory=lambda: _require("SUPABASE_SERVICE_ROLE_KEY")
+        default_factory=lambda: _optional("SUPABASE_SERVICE_ROLE_KEY")
     )
     supabase_anon_key: str = field(default_factory=lambda: _optional("SUPABASE_ANON_KEY"))
 
     # Application
     app_env: str = field(default_factory=lambda: _optional("APP_ENV", "development"))
     log_level: str = field(default_factory=lambda: _optional("LOG_LEVEL", "INFO"))
+    # Browser origins allowed to call the API (comma-separated), e.g. the Vercel URL.
+    cors_origins: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            o.strip().rstrip("/")
+            for o in _optional("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(
+                ","
+            )
+            if o.strip()
+        )
+    )
 
     @property
     def is_production(self) -> bool:

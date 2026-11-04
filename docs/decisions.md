@@ -63,10 +63,17 @@ probably too generous to promoted clubs. This is a known limitation to measure i
 
 ## OD-003 — Forecast refresh cadence
 
-**Status:** Open  
+**Status:** Decided 2026-11-04 (Milestone 8); the owner can change the schedule any time  
 **Question:** Should V1 refresh forecasts automatically after every completed
 match, on a scheduled basis (e.g., daily), or manually?  
-**Decision:** _pending_
+**Decision:** **Daily, plus on demand.** `.github/workflows/refresh.yml` runs
+`scripts/refresh.py` at 05:30 UTC (after the previous evening's matches) and can be started
+by hand from the GitHub Actions tab. Each run imports the current season, re-forecasts only
+competitions whose data changed (or whose forecast is over 7 days old), and publishes through
+the quality gates. Rationale: probabilities only move when results come in; per-match refresh
+would need a live-score feed and burn API quota for little gain; a daily job also keeps the
+free Supabase project from pausing for inactivity. Cost: ~15 provider requests and ~1 minute
+of compute per day.
 
 ---
 
@@ -105,3 +112,22 @@ Re-run both backtests before changing any of these, and bump the model version.
 
 **Update (v0.2.1, 2026-11-03):** `strength_sd` 0.15 also applied to the UCL simulator, for
 consistency. It is not separately backtested (one season of the 36-club format).
+
+---
+
+## OD-006 — Hosting
+
+**Status:** Open: needs the owner's choice (accounts, possible cost)
+**Measured needs (2026-11-04):** the refresh job takes ~30 s of compute for all five
+competitions plus ~2 min of rate-limited imports, peak memory ~350 MB; the API is read-only,
+answers in 0.1–2 s, and serves a personal dashboard (low traffic). Database: 20 MB of the
+500 MB free Supabase allowance.
+**Options:**
+1. **Vercel (dashboard) + Render free web service (API) + GitHub Actions (refresh): ₹0.**
+   Render's free service sleeps after ~15 min without visits; the first visit then takes
+   ~30–60 s to wake.
+2. **Vercel + Railway (API) + GitHub Actions: ~$5/month.** Always on, no wake-up delay.
+3. **Fully static: ₹0, always fast.** The daily job writes every API response as JSON files
+   and publishes them with the dashboard on Vercel; no API server at all. Needs extra work
+   (exporting each fixture and team page), and the dashboard can only show what was exported.
+**Decision:** _pending_

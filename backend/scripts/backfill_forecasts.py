@@ -33,13 +33,12 @@ bootstrap()
 
 from app.database import publishing
 from app.database.connection import connect
-from app.database.forecasts import git_commit, save_season_forecast
+from app.database.forecasts import git_commit
 from app.models import config
 from app.models.data import load_match_records
 from app.models.poisson import fit_poisson
-from app.simulations.domestic import simulate_league
+from app.services.forecasting import save_run, simulate_competition
 from app.simulations.rules import load_rules
-from app.simulations.ucl import simulate_ucl
 
 LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A", "UCL"]
 MATCH_LENGTH = timedelta(hours=2, minutes=30)  # kickoff -> safely after full time
@@ -129,33 +128,15 @@ def main() -> int:
                     continue
                 t0 = time.time()
                 model = fit_poisson(recs, cutoff, config.POISSON)
-                if comp == "UCL":
-                    # Backfill covers the league phase only: knockout draws are not
-                    # reconstructible as of a past date.
-                    f = simulate_ucl(recs, args.season, model, rules, cutoff, n_sims=args.sims,
-                                     seed=args.seed, knockout=(), draw=None,
-                                     strength_sd=config.STRENGTH_SD)  # fmt: skip
-                else:
-                    f = simulate_league(recs, comp, args.season, model, rules, cutoff,
-                                        n_sims=args.sims, seed=args.seed,
-                                        strength_sd=config.STRENGTH_SD)  # fmt: skip
+                # UCL: league phase only - knockout draws are not reconstructible as of a
+                # past date.
+                f, _ = simulate_competition(conn, recs, model, comp, args.season, cutoff,
+                                            n_sims=args.sims, seed=args.seed,
+                                            knockout=False)  # fmt: skip
                 f.notes = [*f.notes, f"Historical run: computed {datetime.now(tz=UTC):%Y-%m-%d} "
                            f"using only data before {cutoff:%Y-%m-%d %H:%M} UTC."]  # fmt: skip
-                params = {
-                    "poisson": model.params.to_dict(),
-                    "poisson_fit": {"mu": model.mu, "home_advantage": model.home_advantage,
-                                    "matches_used": model.matches_used,
-                                    "group_priors": model.priors},
-                    "strength_sd": config.STRENGTH_SD,
-                    "backfill": {"matchday": md},
-                    "rules": {"tiebreakers": [t.value for t in rules.tiebreakers],
-                              "playoff_positions": list(rules.playoff_positions),
-                              "source": rules.source, "source_quality": rules.source_quality},
-                }  # fmt: skip
-                run_id = save_season_forecast(
-                    conn, f, model_name=config.MODEL_NAME, model_version=config.MODEL_VERSION,
-                    params=params, code_version=code_version, is_backfill=True,
-                )  # fmt: skip
+                run_id = save_run(conn, f, model, rules, code_version=code_version,
+                                  is_backfill=True, backfill={"matchday": md})  # fmt: skip
                 msg = f"saved run #{run_id} ({time.time() - t0:.0f}s)"
                 if args.publish:
                     _, checks = publishing.publish_checks(

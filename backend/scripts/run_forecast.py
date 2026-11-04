@@ -6,7 +6,8 @@ Usage (from backend/):
     .venv/Scripts/python scripts/run_forecast.py -c EPL --save      # store as an UNPUBLISHED run
     .venv/Scripts/python scripts/run_forecast.py --sims 20000 --seed 7
 
-THE MODEL IS NOT VALIDATED YET (Milestone 6).  Stored runs are unpublished.
+Stored runs are unpublished: publish with publish_run.py, or use refresh.py for the
+whole import -> forecast -> publish pipeline.
 """
 
 from __future__ import annotations
@@ -22,15 +23,13 @@ from _bootstrap import bootstrap  # noqa: E402
 
 bootstrap()
 
-from app.database import repository as repo
 from app.database.connection import connect
-from app.database.forecasts import git_commit, save_season_forecast
+from app.database.forecasts import git_commit
 from app.models import config
 from app.models.data import load_match_records
 from app.models.poisson import fit_poisson
-from app.simulations.domestic import simulate_league
-from app.simulations.rules import load_rules
-from app.simulations.ucl import KNOCKOUT_STAGES, UCLForecast, load_draw, simulate_ucl
+from app.services.forecasting import save_run, simulate_competition
+from app.simulations.ucl import UCLForecast
 
 LEAGUES = ["EPL", "LA_LIGA", "BUNDESLIGA", "SERIE_A", "UCL"]
 MODEL_NAME, MODEL_VERSION = config.MODEL_NAME, config.MODEL_VERSION
@@ -62,8 +61,9 @@ def main() -> None:
     ap.add_argument("--save", action="store_true", help="store as an unpublished model run")
     args = ap.parse_args()
 
-    as_of = datetime.now(tz=UTC)
     with connect() as conn:
+        # Database clock: import timestamps come from it (see app/services/refresh.py).
+        as_of = max(datetime.now(tz=UTC), conn.execute("select now()").fetchone()[0])
         recs = load_match_records(conn)
         names = dict(conn.execute("select id, coalesce(short_name, name) from teams").fetchall())
         model = fit_poisson(recs, as_of, config.POISSON)
@@ -75,19 +75,9 @@ def main() -> None:
               f"code {code}\n")  # fmt: skip
 
         for comp in args.competition or LEAGUES:
-            rules = load_rules(comp, args.season)
             t0 = time.time()
-            if comp == "UCL":
-                knockout = [f for f in repo.load_fixtures(conn, repo.season_id(conn, "UCL", args.season))
-                            if f.stage in KNOCKOUT_STAGES]  # fmt: skip
-                f = simulate_ucl(recs, args.season, model, rules, as_of,
-                                 n_sims=args.sims, seed=args.seed, knockout=knockout,
-                                 draw=load_draw(args.season),
-                                 strength_sd=config.STRENGTH_SD)  # fmt: skip
-            else:
-                f = simulate_league(recs, comp, args.season, model, rules, as_of,
-                                    n_sims=args.sims, seed=args.seed,
-                                    strength_sd=config.STRENGTH_SD)  # fmt: skip
+            f, rules = simulate_competition(conn, recs, model, comp, args.season, as_of,
+                                            n_sims=args.sims, seed=args.seed)  # fmt: skip
             exp_pos = f.expected_position
             zones = [z.key for z in rules.zones if z.key != "champion"]
             print(f"--- {comp} {args.season}/{(args.season + 1) % 100:02d} "
@@ -119,20 +109,7 @@ def main() -> None:
                 print(f"  note: {note}")
             print(f"  rules: {rules.source_quality} source, verified {rules.verified_on}")
             if args.save:
-                params = {
-                    "poisson": model.params.to_dict(),
-                    "poisson_fit": {"mu": model.mu, "home_advantage": model.home_advantage,
-                                    "matches_used": model.matches_used,
-                                    "group_priors": model.priors},
-                    "strength_sd": config.STRENGTH_SD,
-                    "rules": {"tiebreakers": [t.value for t in rules.tiebreakers],
-                              "playoff_positions": list(rules.playoff_positions),
-                              "source": rules.source, "source_quality": rules.source_quality},
-                }  # fmt: skip
-                run_id = save_season_forecast(
-                    conn, f, model_name=MODEL_NAME, model_version=MODEL_VERSION,
-                    params=params, code_version=code,
-                )  # fmt: skip
+                run_id = save_run(conn, f, model, rules, code_version=code)
                 print(f"  saved as model run #{run_id} (unpublished)")
             print()
 

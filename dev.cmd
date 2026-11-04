@@ -6,7 +6,7 @@ cd /d "%~dp0"
 if not exist "backend\.venv\Scripts\python.exe" (
   echo [setup] Creating backend virtual environment...
   python -m venv backend\.venv || goto :error
-  backend\.venv\Scripts\python -m pip install -r backend\requirements.txt || goto :error
+  backend\.venv\Scripts\python -m pip install -r backend\requirements-dev.txt || goto :error
 )
 if not exist "frontend\node_modules" (
   echo [setup] Installing frontend packages...

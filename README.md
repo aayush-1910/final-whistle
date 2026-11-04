@@ -491,7 +491,7 @@ One-time setup (Windows, Git Bash; on PowerShell use `.venv\Scripts\activate`):
 # Backend
 cd backend
 python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt
+.venv/Scripts/python -m pip install -r requirements-dev.txt
 
 # Frontend
 cd ../frontend
@@ -899,7 +899,7 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ## 21. Current project status
 
-**Current phase: Milestone 7 (API + dashboard) complete → next is Milestone 8 (deployment).**
+**Current phase: Milestone 8 (deployment) prepared → waiting for the owner's hosting choice (OD-006).**
 
 Done so far:
 
@@ -923,7 +923,9 @@ Done so far:
 
 - Milestone 7 (dashboard): React dashboard built from the project owner's design: Overview, Competitions, Match Predictor, UCL Simulator, Team Explorer, Model Intelligence and Data Centre, with search (Ctrl K). Shows published forecasts only, with model version and data cutoff next to every probability. Matchday-by-matchday history comes from historical backfill runs (`backend/scripts/backfill_forecasts.py`, flagged `is_backfill`, using only data before each cutoff). Club crests and competition emblems are provider URLs.
 
-**Next action:** Milestone 8 (deployment and scheduled data refresh). Trophy and stadium artwork to be added when the owner supplies the files.
+- Milestone 8 (prepared): one-command refresh `backend/scripts/refresh.py` (import, re-forecast what changed, publish via the quality gates; per-step report, non-zero exit on failure), daily GitHub Actions schedule (OD-003), CI workflow, API container (`backend/Dockerfile`), JSON logs, CORS from settings, production secrets reduced to `DATABASE_URL` + `FOOTBALL_DATA_ORG_KEY`. Runbook: `docs/deployment.md`.
+
+**Next action:** the owner chooses hosting (OD-006) and connects the accounts; then deploy and verify. Trophy and stadium artwork to be added when the owner supplies the files.
 
 ---
 
