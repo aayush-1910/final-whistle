@@ -1,0 +1,22 @@
+# Render Blueprint for the Final Whistle API (free web service, Docker).
+# Render -> New -> Blueprint -> pick this repository.  It asks for the two values
+# marked `sync: false`; nothing secret is stored in this file.
+services:
+  - type: web
+    name: final-whistle-api
+    runtime: docker
+    plan: free
+    region: singapore # same region as the Supabase database (ap-southeast-1)
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL # Supabase "Session pooler" connection string
+        sync: false
+      - key: CORS_ORIGINS # the dashboard's Vercel address, e.g. https://final-whistle.vercel.app
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: LOG_FORMAT
+        value: json

@@ -117,7 +117,7 @@ consistency. It is not separately backtested (one season of the 36-club format).
 
 ## OD-006 — Hosting
 
-**Status:** Open: needs the owner's choice (accounts, possible cost)
+**Status:** Decided 2026-11-04 by the owner: option 1 (Vercel + Render free + GitHub Actions)
 **Measured needs (2026-11-04):** the refresh job takes ~30 s of compute for all five
 competitions plus ~2 min of rate-limited imports, peak memory ~350 MB; the API is read-only,
 answers in 0.1–2 s, and serves a personal dashboard (low traffic). Database: 20 MB of the
@@ -130,4 +130,4 @@ answers in 0.1–2 s, and serves a personal dashboard (low traffic). Database: 2
 3. **Fully static: ₹0, always fast.** The daily job writes every API response as JSON files
    and publishes them with the dashboard on Vercel; no API server at all. Needs extra work
    (exporting each fixture and team page), and the dashboard can only show what was exported.
-**Decision:** _pending_
+**Decision:** Option 1, ₹0. Dashboard on Vercel Hobby; API on a Render free web service (Docker, Singapore region, next to the database; `render.yaml`); refresh on GitHub Actions. Accepted trade-off: a 30–60 s wake-up after idle periods. Moving to option 2 later only means changing the API host.

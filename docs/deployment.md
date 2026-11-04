@@ -40,9 +40,21 @@ Notes:
 - The refresh never runs database migrations. Apply new migrations yourself
   (`scripts/migrate.py`), and do it before deploying code that needs them.
 
-## 2. API
+## 2. API (Render, free)
 
-Build the container from `backend/` (`Dockerfile`). Set these environment variables on the host:
+1. Sign in at render.com with GitHub, then go to **New → Blueprint** and pick this repository.
+   Render reads `render.yaml` (Docker, free plan, Singapore region, health check).
+2. It asks for two values:
+   - `DATABASE_URL`: the Session pooler string, with the real password.
+   - `CORS_ORIGINS`: the dashboard's Vercel address (put a placeholder first, then update it
+     after step 3).
+3. Deploy. The API address looks like `https://final-whistle-api.onrender.com`. Check
+   `.../api/v1/health/ready` says `"database": "ok"`.
+
+The free service sleeps after ~15 min without requests; the next visit wakes it (30–60 s).
+Every push to `main` redeploys automatically.
+
+Any other container host works the same way. Build from `backend/` (`Dockerfile`) and set:
 
 ```
 DATABASE_URL=<Session pooler string>
@@ -59,6 +71,8 @@ Logs: one JSON object per line. Requests slower than 3 s and server errors are l
 WARNING level.
 
 ## 3. Dashboard (Vercel)
+
+(Sign in at vercel.com with GitHub.)
 
 1. Import the GitHub repository in Vercel and set the **Root Directory** to `frontend`.
    Vercel detects Vite: build `npm run build`, output `dist`.
