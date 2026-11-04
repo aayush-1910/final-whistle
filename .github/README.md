@@ -2,6 +2,8 @@
 
 # ⚽ Final Whistle
 
+**👉 Live: [final-whistle-kohl.vercel.app](https://final-whistle-kohl.vercel.app)**
+
 ### Who's actually going to win the league?
 **Final Whistle plays out the rest of the season thousands of times so you don't have to guess.**
 

@@ -1,5 +1,8 @@
 # Deployment and operations
 
+**Live (2026-11-04):** dashboard https://final-whistle-kohl.vercel.app, API
+https://final-whistle-api.onrender.com (docs at `/docs`), refresh in the GitHub Actions tab.
+
 Three independent pieces. Each can be hosted separately, and none is live until the steps
 below are done.
 

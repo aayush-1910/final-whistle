@@ -925,7 +925,8 @@ Done so far:
 
 - Milestone 8 (live 2026-11-04): one-command refresh `backend/scripts/refresh.py` (import, re-forecast what changed, publish via the quality gates; per-step report, non-zero exit on failure), daily GitHub Actions schedule (OD-003), CI workflow, API container (`backend/Dockerfile`), JSON logs, CORS from settings, production secrets reduced to `DATABASE_URL` + `FOOTBALL_DATA_ORG_KEY`. Runbook: `docs/deployment.md`.
 
-  Hosting (OD-006): dashboard on Vercel, API on Render free (https://final-whistle-api.onrender.com),
+  Hosting (OD-006): dashboard on Vercel (https://final-whistle-kohl.vercel.app), API on Render
+  free (https://final-whistle-api.onrender.com),
   daily refresh on GitHub Actions. First automatic refresh imported 9 UCL results, re-forecast
   and published all five competitions.
 
