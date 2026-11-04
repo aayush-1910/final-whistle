@@ -2,7 +2,7 @@
 
 > **Football analytics and season-forecasting platform** for the 2026/27 season.
 >
-> **Project status:** Planning / pre-development  
+> **Project status:** V1 live (Milestone 8 complete, 2026-11-04). Dashboard: <https://final-whistle-kohl.vercel.app>  
 > **Initial release:** V1  
 > **Primary purpose:** Generate transparent, data-driven predictions for the English Premier League, UEFA Champions League, La Liga, Bundesliga, and Serie A.
 
@@ -99,7 +99,7 @@ Typical workflow:
 
 ## 4. Technical architecture
 
-### Proposed stack
+### Stack
 
 | Layer | Technology | Responsibility |
 |---|---|---|
@@ -107,16 +107,16 @@ Typical workflow:
 | UI styling | Tailwind CSS | Consistent layout, typography, and styling |
 | Charts | Recharts | Probability bars, position distributions, tables, and trends |
 | Backend API | Python + FastAPI | Validated API endpoints and orchestration |
-| Prediction engine | Python, NumPy, SciPy | Elo, Poisson, probability calculations, and simulation |
-| Data processing | Pandas | Cleaning, normalization, and historical analysis |
+| Prediction engine | Python, NumPy, SciPy | Poisson match model (Elo kept as a benchmark), probability calculations, and simulation |
+| Data access | psycopg 3 | SQL queries, upserts, and migrations against PostgreSQL |
 | Database | Supabase PostgreSQL | Teams, competitions, fixtures, results, model runs, and forecasts |
-| Data provider candidate | API-Football / API-Sports | Fixtures, results, standings, teams, and other covered football data |
+| Data provider | football-data.org (free tier) | Fixtures, results, standings, and teams for all five competitions (OD-001) |
 | Source control | Git + GitHub | Version history, branches, and recovery points |
-| Frontend hosting | Vercel Hobby initially | Static/frontend deployment for personal use |
-| Backend hosting | Railway or another Python host, later | FastAPI deployment once local development is stable |
-| Coding assistant | OpenAI Codex or another IDE agent | Assisted implementation and debugging; human review remains required |
+| Frontend hosting | Vercel Hobby | Static dashboard deployment (OD-006) |
+| Backend hosting | Render free web service (Docker) | Read-only FastAPI deployment (`render.yaml`, OD-006) |
+| Scheduled refresh | GitHub Actions | Daily import, forecast and publish (`.github/workflows/refresh.yml`, OD-003) |
 
-The stack is a proposal for V1, not a reason to force every service into the first prototype. The engine should run locally first. Database and deployment integration can follow once the data model and engine are tested.
+The whole stack runs on free tiers, and everything also runs locally (see §10).
 
 ### High-level data flow
 
@@ -133,10 +133,7 @@ Normalization and canonical IDs
 PostgreSQL database
         |
         v
-Feature generation
-        |
-        v
-Elo + Poisson match model
+Model fitting (time-weighted Poisson; Elo as a benchmark)
         |
         v
 Domestic league / UCL simulators
@@ -145,85 +142,77 @@ Domestic league / UCL simulators
 Forecast storage and model evaluation
         |
         v
+Publishing quality gates
+        |
+        v
 FastAPI endpoints
         |
         v
 React analytics dashboard
 ```
 
-### Proposed repository layout
+### Repository layout
 
 ```text
 final-whistle/
 |
 |-- README.md
-|-- .gitignore
-|-- .env.example
-|-- docs/
-|   |-- product-spec.md
-|   |-- data-dictionary.md
-|   |-- model-methodology.md
-|   |-- architecture.md
-|   `-- decisions.md
+|-- .env.example              # copy to .env (never committed)
+|-- dev.cmd                   # Windows: start backend + frontend locally
+|-- render.yaml               # Render blueprint for the API
+|-- .github/
+|   |-- README.md             # public project page
+|   `-- workflows/            # ci.yml, refresh.yml (daily data refresh)
+|-- docs/                     # architecture, api, decisions, methodology, backtests,
+|                             # data dictionary, known data issues, deployment runbook
 |
 |-- backend/
 |   |-- app/
-|   |   |-- main.py
-|   |   |-- api/
-|   |   |   `-- routes/
-|   |   |-- core/
-|   |   |   `-- config.py
-|   |   |-- providers/
-|   |   |   `-- api_football.py
-|   |   |-- ingestion/
-|   |   |-- database/
-|   |   |-- domain/
-|   |   |-- features/
-|   |   |-- models/
-|   |   |   |-- elo.py
-|   |   |   |-- poisson.py
-|   |   |   `-- calibration.py
-|   |   |-- simulations/
-|   |   |   |-- domestic.py
-|   |   |   `-- ucl.py
-|   |   `-- services/
-|   |-- scripts/
-|   |-- tests/
-|   |-- requirements.txt
-|   `-- .env
+|   |   |-- main.py           # FastAPI app, health checks, CORS
+|   |   |-- api/              # v1 routes, response schemas, SQL queries
+|   |   |-- core/             # settings, logging
+|   |   |-- domain/           # canonical, self-validating types
+|   |   |-- providers/        # football_data_org.py (api_football.py: evaluated, unused)
+|   |   |-- ingestion/        # normalizer, standings cross-check, import service
+|   |   |-- database/         # connection, migrations, repository, forecasts, publishing gates
+|   |   |-- models/           # elo.py, poisson.py, production config.py
+|   |   |-- simulations/      # domestic.py, ucl.py, table.py (tiebreakers), rules.py
+|   |   |-- evaluation/       # backtest.py, metrics.py
+|   |   `-- services/         # forecasting.py, refresh.py
+|   |-- migrations/           # numbered SQL migrations
+|   |-- rules/2026/           # per-competition season rules (JSON)
+|   |-- scripts/              # migrate, ingest, run_forecast, publish_run, refresh, backtests
+|   |-- tests/                # unit tests; tests/integration needs RUN_DB_TESTS=1
+|   |-- Dockerfile
+|   `-- requirements.txt
 |
 `-- frontend/
-    |-- public/
     |-- src/
+    |   |-- pages/            # Overview, Competitions, MatchPredictor, UclSimulator,
+    |   |                     # TeamExplorer, ModelIntelligence, DataCentre
     |   |-- components/
-    |   |-- pages/
-    |   |-- features/
-    |   |-- services/
     |   |-- hooks/
-    |   `-- styles/
-    |-- package.json
-    `-- .env.local
+    |   |-- lib/
+    |   `-- services/api.ts
+    `-- package.json
 ```
 
-The exact folders can be adjusted when implementation starts. Keep the provider, forecasting logic, API, and frontend separate so changing one layer does not require rewriting everything else.
+Provider code, forecasting logic, API and frontend are kept separate, so changing one layer does not require rewriting the others.
 
 ---
 
 ## 5. Football data strategy
 
-### Initial provider candidate: API-Football
+### Provider: football-data.org (decided, OD-001)
 
-API-Football is the first provider to test because it advertises endpoints for leagues, seasons, standings, teams, fixtures, results, statistics, and predictions across many competitions.
+football-data.org's free tier is the only data source in production. Verified with a real key, it covers all five competitions for 2026/27, with free history for 2023-2025. See `docs/milestone-0-football-data-org-report.md`.
 
-Official links:
+- <https://www.football-data.org/>
+- <https://www.football-data.org/documentation/quickstart>
 
-- Website and plan information: <https://www.api-football.com/>
-- API documentation: <https://www.api-football.com/documentation-v3>
-- Pricing: <https://www.api-football.com/pricing>
+API-Football was evaluated first and rejected: its free plan has **no 2026/27 access** and history only for 2022-2024 (`docs/milestone-0-coverage-report.md`). Its client (`backend/app/providers/api_football.py`) is kept but not used.
 
-The provider's public pricing page currently advertises a free tier with 100 requests per day. Access to historical seasons is limited by plan. These limits and entitlements can change; check the live account dashboard and current terms before relying on them.
-
-**Provider status: provisional.** Do not assume the free plan contains every historical season required for reliable backtesting. Before committing, verify all five competitions, 2026 season coverage, fixture/result coverage, historical seasons, and the fields needed by the model.
+The thin history (three seasons) is a known limitation for model warm-up and backtesting. No paid tier is used.
 
 ### Data coverage checklist
 
@@ -241,15 +230,6 @@ For each competition, verify:
 
 Do not begin a paid subscription until the coverage test demonstrates that the required information is unavailable on the free plan and the cost is justified.
 
-### Backup provider to evaluate
-
-Football-data.org is a possible fallback for fixtures, results, and tables:
-
-- <https://www.football-data.org/>
-- <https://www.football-data.org/documentation/quickstart>
-
-Its free offering and historical coverage may differ from the requirements of this project. Evaluate it independently; do not assume it can replace every API-Football endpoint.
-
 ### Data-source rules
 
 - Use documented APIs and respect provider terms, quotas, attribution rules, and licensing.
@@ -260,19 +240,17 @@ Its free offering and historical coverage may differ from the requirements of th
 - Cache responses and avoid repeatedly requesting unchanged data.
 - Never expose the API key in frontend code, public repositories, screenshots, or client-side network calls.
 
-### Initial API request budget
+### API request budget
 
-The free API-Football tier is advertised at 100 requests/day. This is a strict prototype constraint, not a target to consume. The ingestion design should:
+The football-data.org free tier allows 10 requests per minute. The ingestion:
 
-1. Fetch competition/season metadata sparingly.
-2. Fetch fixtures and results in batches where supported.
-3. Persist raw provider responses for diagnosis where permitted.
-4. Normalize and upsert data instead of inserting duplicates.
-5. Refresh only records that need updating.
-6. Record quota usage and API errors.
-7. Use exponential backoff for transient failures and stop retrying on quota exhaustion.
+1. Uses 3 requests per competition-season (about 15 for a full current-season import).
+2. Sleeps between requests to stay under the per-minute limit.
+3. Saves raw provider responses to `backend/raw_responses/` (git-ignored) for diagnosis.
+4. Normalizes and upserts data instead of inserting duplicates; unchanged rows are not rewritten.
+5. Records every run, its issues and any errors in `ingestion_runs`.
 
-A daily refresh schedule is not required during the first local prototype. Manual refresh is acceptable while building and testing.
+The refresh runs daily on GitHub Actions and can also be started by hand (OD-003).
 
 ---
 
@@ -356,6 +334,8 @@ Initial versions may use independent Poisson goal counts. More advanced variants
 ### 7.3 Combining models
 
 Elo and Poisson provide different information. V1 can compare them independently first, then test a transparent blend. Do not choose blending weights based on how well they fit the current season. Select parameters using historical, time-ordered validation.
+
+**Outcome (OD-005):** on unseen test data, Poisson beat Elo, and the blend did not beat Poisson alone. Production therefore uses **Poisson only** (`backend/app/models/config.py`); Elo remains a benchmark. See `docs/backtest-report.md`.
 
 ### 7.4 Monte Carlo simulation
 
@@ -453,7 +433,7 @@ Do not claim the model is superior without a fair, out-of-sample comparison.
 
 A serious football analytics product: restrained, data-dense, readable, and professional. Avoid gambling-site styling, excessive gradients, neon effects, fake live indicators, or decorative AI branding.
 
-### Proposed visual language
+### Visual language
 
 - Dark navy/charcoal base with slate surfaces.
 - High-contrast text and readable data tables.
@@ -463,15 +443,17 @@ A serious football analytics product: restrained, data-dense, readable, and prof
 - Charts with clear legends, labels, tooltips, and accessible contrast.
 - Desktop-first analytics layout that remains usable on mobile.
 
-### Proposed pages
+### Pages (implemented)
 
-1. **Overview** — competition cards, recent forecast runs, next fixtures, data freshness, and leading probabilities.
-2. **Competition page** — standings, title probabilities, expected final table, qualification and relegation outlook.
-3. **UCL page** — league-phase table, qualification routes, play-off and knockout progression probabilities, winner forecast.
-4. **Team page** — current standing, rating trend, recent results, upcoming fixtures, and forecast outlook.
-5. **Match page** — home/draw/away probabilities, expected goals, score probability grid, and model factors.
-6. **Model performance page** — backtest periods, metrics, calibration plots, model versions, and limitations.
-7. **About / methodology** — data sources, update cadence, model descriptions, assumptions, and known limitations.
+1. **Overview**: competition cards, leading probabilities, next fixtures, and data freshness.
+2. **Competitions**: standings, title probabilities, expected final table, qualification and relegation outlook, and forecast timeline.
+3. **UCL Simulator**: league-phase table, qualification routes, knockout progression, and winner forecast.
+4. **Team Explorer**: current standing, recent results, upcoming fixtures, and forecast history.
+5. **Match Predictor**: home/draw/away probabilities, expected goals, and score probabilities.
+6. **Model Intelligence**: backtest metrics, calibration, model versions, and limitations.
+7. **Data Centre**: data sources, import status, update cadence, and freshness.
+
+Search across teams and competitions with Ctrl K.
 
 No page should display fabricated sample predictions as though they were live. Placeholder UI must be clearly labelled as demo data.
 
@@ -532,38 +514,33 @@ Recommended VS Code extensions:
 - Prettier.
 - Tailwind CSS IntelliSense.
 - GitLens (optional).
-- OpenAI Codex extension (optional coding agent).
 
 ### Accounts to create
 
 | Account | Why | Official website |
 |---|---|---|
 | GitHub | Store source code and track changes | <https://github.com/> |
-| API-Football | Test football data availability | <https://www.api-football.com/> |
+| football-data.org | Football data API token | <https://www.football-data.org/> |
 | Supabase | Hosted PostgreSQL database | <https://supabase.com/> |
-| Vercel | Frontend deployment when ready | <https://vercel.com/> |
-| Railway | Possible backend deployment later | <https://railway.com/> |
+| Vercel | Dashboard hosting | <https://vercel.com/> |
+| Render | API hosting | <https://render.com/> |
 
-Creating the accounts does not mean every service needs to be connected immediately. Do not create tables, deploy services, or purchase plans before the architecture and data requirements are confirmed.
+Deployment steps are in `docs/deployment.md`.
 
 ### Coding assistant
 
-OpenAI Codex can be used through a supported IDE extension or CLI by signing in with a ChatGPT account. Availability and usage limits depend on the current plan. Codex usage is not unlimited, and a cloud coding environment is not assumed to be available on every plan.
+An AI coding assistant may be used, but it is an assistant, not an authority. It must not be allowed to invent API fields, skip tests, expose secrets, change the product scope, or silently rewrite the architecture. See §18.
 
-Official guide: <https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan>
-
-An AI coding agent is an assistant, not an authority. It must not be allowed to invent API fields, skip tests, expose secrets, change the product scope, or silently rewrite the architecture.
-
-### What is not required initially
+### What is not required
 
 - Cursor Pro or another paid IDE subscription.
 - OpenAI API credits or an OpenAI API key.
 - A GPU, CUDA, or local large language model.
-- Docker (can be introduced if it solves a real environment problem).
+- Docker locally (Render builds the API image from `backend/Dockerfile`).
 - A paid Supabase plan.
 - A paid football data plan before coverage is checked.
 - A custom domain.
-- Paid backend hosting during local development.
+- Paid backend hosting.
 
 The Elo, Poisson, and Monte Carlo models proposed for V1 are conventional statistical computations. They do not require a dedicated GPU.
 
@@ -573,23 +550,27 @@ The Elo, Poisson, and Monte Carlo models proposed for V1 are conventional statis
 
 Secrets must remain on the backend. Never put provider credentials in `frontend` environment variables that are exposed to the browser.
 
-A future root/backend environment configuration may contain:
+The root `.env` (copied from `.env.example`) contains:
 
 ```env
-# Football data provider
-API_FOOTBALL_KEY=replace_me
+# Required
+FOOTBALL_DATA_ORG_KEY=replace_me     # football-data.org token (data imports)
 
-# Supabase - backend only
+# Database: EITHER a full connection string (servers and GitHub Actions need the
+# Supabase "Session pooler" string, because the direct host is IPv6-only) ...
+DATABASE_URL=
+# ... OR the project URL + database password
 SUPABASE_URL=replace_me
-SUPABASE_SERVICE_ROLE_KEY=replace_me
-SUPABASE_ANON_KEY=replace_me
+SUPABASE_DB_PASSWORD=replace_me
 
-# Application
-APP_ENV=development
+# Optional
+APP_ENV=development                  # production on servers
 LOG_LEVEL=INFO
+LOG_FORMAT=text                      # json on servers
+CORS_ORIGINS=http://localhost:5173   # browser origins allowed to call the API
 ```
 
-The frontend may only receive public, browser-safe configuration such as a public Supabase URL/key if the chosen architecture genuinely needs it. The service-role key must never reach the frontend.
+Production needs only `DATABASE_URL` and `FOOTBALL_DATA_ORG_KEY`, plus `CORS_ORIGINS` on the API host. The frontend receives no secrets: it calls the backend API, never the data provider or the database.
 
 Required safeguards:
 
@@ -604,24 +585,22 @@ Required safeguards:
 
 ## 12. Hosting and cost plan
 
-The target is to keep initial development at **₹0 in additional project spending**, using local development and free tiers where practical. This is a target, not a promise that every production requirement will remain free.
+V1 runs at **₹0 in project spending** (OD-006). Measured on 2026-11-04: the refresh takes ~30 s of compute plus ~2 min of rate-limited imports, peaking at ~350 MB memory; the database uses 20 MB.
 
-| Service | Initial plan | Important caveat |
+| Service | Plan | Important caveat |
 |---|---|---|
-| API-Football | Free tier for prototype | Advertises 100 requests/day; historical seasons are limited by plan. Confirm current access and quota in the account dashboard. |
-| Supabase | Free | Current published free limits include 500 MB database size; inactive free projects may be paused. Check current terms and usage limits. |
-| Vercel | Hobby | Intended for personal/non-commercial use under current terms. Check the plan terms before commercial use. |
-| Railway | Do not subscribe initially | Current pricing lists a Free plan with limited monthly credit and Hobby at a $5/month base fee including $5 of usage. Usage above the included amount can increase cost. |
-| GitHub | Free account | Sufficient for a personal project repository. |
-| Codex | Existing ChatGPT-plan access, subject to limits | Usage limits vary by plan; additional usage may have separate costs. |
+| football-data.org | Free | 10 requests/minute; history limited to recent seasons. |
+| Supabase | Free | 500 MB database limit; inactive free projects may be paused (the daily refresh keeps it active). |
+| Vercel | Hobby | Intended for personal/non-commercial use under current terms. |
+| Render | Free web service | Sleeps after ~15 min idle; the first visit then takes ~30-60 s to wake. Moving to an always-on host (e.g. Railway, ~$5/month) only changes the API host. |
+| GitHub | Free account + Actions | Runs CI and the daily refresh. |
 
 Official pricing references:
 
-- API-Football: <https://www.api-football.com/pricing>
+- football-data.org: <https://www.football-data.org/pricing>
 - Supabase: <https://supabase.com/pricing>
 - Vercel: <https://vercel.com/docs/plans/hobby>
-- Railway: <https://docs.railway.com/pricing/plans>
-- Codex access: <https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan>
+- Render: <https://render.com/pricing>
 
 No subscription should be purchased until a measured limitation requires it. Check prices and plan terms again at the point of purchase because providers can change them.
 
@@ -631,10 +610,12 @@ No subscription should be purchased until a measured limitation requires it. Che
 
 Development is milestone-based. Each milestone must have a working, testable result before moving to the next one.
 
+**All milestones (0-8) are complete.** The plan below is kept as the record of what each milestone had to deliver; §21 summarizes what was built.
+
 ### Milestone 0 — Product and data validation
 
 - Confirm V1 scope and the five competition identities.
-- Inspect API-Football access for each competition and season.
+- Inspect provider access (API-Football, then football-data.org) for each competition and season.
 - Verify 2026/27 fixtures, results, standings, status fields, and historical depth.
 - Verify API quotas and permitted use.
 - Compare available historical data against backtesting needs.
@@ -718,8 +699,8 @@ Development is milestone-based. Each milestone must have a working, testable res
 
 ### Milestone 8 — Deployment and monitoring
 
-- Deploy frontend to an appropriate Vercel plan.
-- Deploy backend to Railway or another suitable host only after measuring runtime needs.
+- Deploy frontend to Vercel (done: Hobby).
+- Deploy backend to a suitable host only after measuring runtime needs (done: Render free, OD-006).
 - Configure production secrets securely.
 - Add health checks and structured logs.
 - Set a controlled refresh schedule.
@@ -729,26 +710,29 @@ Development is milestone-based. Each milestone must have a working, testable res
 
 ---
 
-## 14. API design proposal
+## 14. API
 
-**Implemented** (Milestone 7). The reference with response shapes and dashboard rules is `docs/api.md`. The live, field-by-field docs are at `/docs` on the running backend. Additions beyond this table: `/health/ready`, `/fixtures/{id}`, and a `preview` query parameter.
+**Implemented** (Milestone 7). The reference with response shapes and dashboard rules is `docs/api.md`. The live, field-by-field docs are at `/docs` on the running backend. Every read endpoint accepts `?preview=true` to include clearly flagged unpublished runs.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/api/v1/health` | Service health |
-| `GET` | `/api/v1/competitions` | List supported competitions |
-| `GET` | `/api/v1/competitions/{competition_id}/seasons/{season_id}/overview` | Competition summary and latest forecast metadata |
-| `GET` | `/api/v1/competitions/{competition_id}/seasons/{season_id}/standings` | Current table/league-phase table |
-| `GET` | `/api/v1/competitions/{competition_id}/seasons/{season_id}/forecast` | Latest season forecast |
+| `GET` | `/api/v1/health/ready` | Readiness (database reachable) |
+| `GET` | `/api/v1/competitions` | Supported competitions with latest forecast metadata |
+| `GET` | `/api/v1/competitions/{code}/seasons/{year}/standings` | Current table/league-phase table |
+| `GET` | `/api/v1/competitions/{code}/seasons/{year}/forecast` | Latest season forecast (incl. UCL rounds) |
+| `GET` | `/api/v1/competitions/{code}/seasons/{year}/timeline` | How the season forecast changed run by run |
+| `GET` | `/api/v1/data/status` | Data freshness and import status |
 | `GET` | `/api/v1/fixtures/upcoming` | Upcoming fixtures |
-| `GET` | `/api/v1/fixtures/{fixture_id}/forecast` | Match probabilities |
-| `GET` | `/api/v1/teams/{team_id}` | Team profile and rating summary |
-| `GET` | `/api/v1/teams/{team_id}/forecast-history` | Team forecast history |
+| `GET` | `/api/v1/fixtures/{fixture_id}` | Fixture detail with match forecast |
+| `GET` | `/api/v1/fixtures/{fixture_id}/forecast` | Match probabilities and scorelines |
+| `GET` | `/api/v1/teams/{team_id}` | Team profile, recent results, next fixtures |
+| `GET` | `/api/v1/teams/{team_id}/forecast-history?competition=&season=` | Team forecast history |
 | `GET` | `/api/v1/models/versions` | Model versions |
 | `GET` | `/api/v1/models/performance` | Backtest metrics and calibration summaries |
 | `GET` | `/api/v1/forecasts/{run_id}` | Forecast run details |
 
-Forecast-generation and ingestion endpoints should be protected. They must not be publicly callable in a way that lets visitors exhaust provider quotas or trigger expensive simulations.
+The API is read-only. Ingestion, forecasting and publishing run only from backend scripts (`scripts/refresh.py`, `scripts/publish_run.py`), so visitors cannot exhaust provider quotas or trigger simulations.
 
 ---
 
@@ -794,7 +778,7 @@ V1 is considered complete when:
 
 - All five selected competitions are supported for the 2026/27 season, subject to verified provider coverage.
 - Fixtures, results, and standings are imported and validated.
-- Domestic league forecasts are generated by the tested Elo/Poisson/Monte Carlo pipeline.
+- Domestic league forecasts are generated by the tested Poisson/Monte Carlo pipeline (Elo benchmarked, OD-005).
 - UCL forecasts follow the verified 2026/27 competition format.
 - Match and season probabilities are stored with timestamps and model versions.
 - Historical backtesting and calibration results are available.
@@ -827,7 +811,7 @@ The model will not know the future. Injuries, managerial changes, transfers, tac
 
 ## 18. Working rules for AI coding agents
 
-When using Codex or another coding assistant on this repository, follow these rules:
+When using any AI coding assistant on this repository, follow these rules:
 
 1. Read this README and the relevant docs before changing files.
 2. Work on one milestone or clearly scoped task at a time.
@@ -848,21 +832,21 @@ A coding agent may generate implementation code, but the project owner is respon
 
 ---
 
-## 19. Open decisions before implementation
+## 19. Design decisions
 
-These decisions must be resolved during Milestone 0 and early architecture work:
+The questions raised before implementation have been resolved. Each is recorded in `docs/decisions.md` with the options considered and the evidence:
 
-- Does API-Football's free plan expose enough 2026/27 data and historical seasons for all five competitions?
-- How many historical seasons are available for each competition, and are all required match fields present?
-- Is a second provider required for historical results or specific competition coverage?
-- Which exact qualification positions should be displayed for each domestic league in 2026/27?
-- What source will be treated as authoritative for competition-specific tiebreakers and UCL draw constraints?
-- How should promoted teams and clubs with limited cross-league history be initialized in Elo?
-- Should V1 refresh forecasts automatically after every completed match, or on a scheduled daily/manual basis?
-- What minimum backtest performance and calibration standards should be required before forecasts are labelled production-ready?
-- Which backend host is the best fit after measuring simulation runtime and expected traffic?
+| Question | Decision |
+|---|---|
+| Data provider and history (OD-001) | football-data.org free tier; 2023-2025 history. API-Football free rejected. |
+| Initializing promoted / new clubs (OD-002) | Learned group priors in the Poisson model; Elo uses the mean rating of the relegated clubs. |
+| Refresh cadence (OD-003) | Daily at 05:30 UTC on GitHub Actions, plus on demand. |
+| Cross-league strength for UCL (OD-004) | One shared rating pool / parameter set across all five competitions. |
+| Production model (OD-005) | Poisson v0.2.x, no blend, per-simulation strength uncertainty (sd 0.15). |
+| Hosting (OD-006) | Vercel + Render free + GitHub Actions, ₹0. |
+| Authoritative rules sources | Official documents for EPL, Bundesliga and UCL; owner-accepted secondary sources for La Liga and Serie A 2026/27 (`backend/rules/2026/`). |
 
-Do not hide unresolved decisions in code. Record them in `docs/decisions.md` with the options considered and the chosen rationale.
+Do not hide new unresolved decisions in code. Add them to `docs/decisions.md` with the options considered and the chosen rationale.
 
 ---
 
@@ -870,12 +854,10 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 
 ### Football data
 
-- API-Football: <https://www.api-football.com/>
-- API-Football documentation: <https://www.api-football.com/documentation-v3>
-- API-Football pricing: <https://www.api-football.com/pricing>
 - Football-data.org: <https://www.football-data.org/>
 - Football-data.org documentation: <https://www.football-data.org/documentation/quickstart>
 - UEFA Champions League: <https://www.uefa.com/uefachampionsleague/>
+- API-Football (evaluated, not used): <https://www.api-football.com/>
 
 ### Development tools
 
@@ -884,7 +866,6 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 - Node.js: <https://nodejs.org/>
 - Git: <https://git-scm.com/>
 - GitHub: <https://github.com/>
-- OpenAI Codex with ChatGPT plans: <https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan>
 
 ### Infrastructure
 
@@ -892,8 +873,8 @@ Do not hide unresolved decisions in code. Record them in `docs/decisions.md` wit
 - Supabase pricing: <https://supabase.com/pricing>
 - Vercel: <https://vercel.com/>
 - Vercel Hobby plan: <https://vercel.com/docs/plans/hobby>
-- Railway: <https://railway.com/>
-- Railway pricing: <https://docs.railway.com/pricing/plans>
+- Render: <https://render.com/>
+- GitHub Actions: <https://docs.github.com/actions>
 
 ---
 
@@ -913,7 +894,7 @@ Done so far:
 
 - Milestone 4: 2026/27 rules for the four leagues (`backend/rules/2026/`, secondary source, flagged as such), a tiebreaker engine covering each league's rules (including head-to-head mini-leagues and Serie A play-offs), a Monte Carlo season simulator (10,000 runs in about 1–2 s per league) with a fixture-list completeness check, and reproducible, unpublished forecast storage. Run: `backend/scripts/run_forecast.py`.
 
-- Milestone 5: Champions League simulator built from the **official UEFA 2026/27 regulations** (Arts. 17–22, primary source): league phase with all 10 tiebreakers, play-offs, the fixed bracket, two-legged ties, extra time, penalties and the neutral final. Every simulated bracket is audited against the rules in tests. The tiebreak engine reproduces 8 official final tables, including head-to-head cases, and revealed that the provider's own standings ignore head-to-head (`docs/known-data-issues.md` #5). **Open item:** conditioning on the real knockout draw must be built before the play-off draw in late January 2027.
+- Milestone 5: Champions League simulator built from the **official UEFA 2026/27 regulations** (Arts. 17–22, primary source): league phase with all 10 tiebreakers, play-offs, the fixed bracket, two-legged ties, extra time, penalties and the neutral final. Every simulated bracket is audited against the rules in tests. The tiebreak engine reproduces 8 official final tables, including head-to-head cases, and revealed that the provider's own standings ignore head-to-head (`docs/known-data-issues.md` #5). Conditioning on the real knockout draw was added before Milestone 7 (see below).
 
 - Milestone 6: walk-forward backtesting (weekly refits, tuned on 2024/25, tested once on 2,060 later matches). Poisson beats Elo significantly and both beat base rates; tuning and blending gave no measurable gain on unseen data. The production config is v0.2.0 (`backend/app/models/config.py`): Poisson with learned priors for promoted/UCL-only clubs, plus team-strength uncertainty in season simulations. Results: `docs/backtest-report.md`, stored in `backtest_runs`; decision OD-005.
 
