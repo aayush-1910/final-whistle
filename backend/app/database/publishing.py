@@ -22,6 +22,13 @@ import psycopg
 from app.models import config
 from app.simulations.rules import RulesNotFoundError, load_rules
 
+# Competition-seasons whose secondary-sourced rules the project owner has reviewed and
+# accepted (2026-11-04: La Liga and Serie A rules verified via Wikipedia summaries of the
+# official regulations). These publish without --accept-secondary-rules.
+ACCEPTED_SECONDARY_RULES: frozenset[tuple[str, int]] = frozenset(
+    {("LA_LIGA", 2026), ("SERIE_A", 2026)}
+)
+
 
 @dataclass(frozen=True)
 class Check:
@@ -73,7 +80,13 @@ def publish_checks(
         quality: str | None = load_rules(state.competition, state.season).source_quality
     except RulesNotFoundError:
         quality = None
-    secondary_ok = quality == "secondary" and accept_secondary_rules
+    owner_accepted = (state.competition, state.season) in ACCEPTED_SECONDARY_RULES
+    secondary_ok = quality == "secondary" and (accept_secondary_rules or owner_accepted)
+    how = (
+        "accepted by the project owner"
+        if owner_accepted
+        else "accepted via --accept-secondary-rules"
+    )
     cutoff = state.data_cutoff
     if state.is_backfill:
         data_check = Check(
@@ -100,7 +113,7 @@ def publish_checks(
         Check("season-level backtest stored", "season" in backtests,
               f"latest for {backtests.get('season')}"),
         Check("rules from a primary source", quality == "primary" or secondary_ok,
-              f"{quality}" + (" (accepted via --accept-secondary-rules)" if secondary_ok else "")),
+              f"{quality}" + (f" ({how})" if secondary_ok else "")),
         data_check,
     ]  # fmt: skip
     return state, checks

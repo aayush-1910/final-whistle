@@ -9,7 +9,10 @@ Interactive docs with every field described: **http://localhost:8000/docs** (whi
    `?preview=true` to get the latest unpublished run. Its `run.is_published` is then `false`,
    and the UI must label it as a preview. Runs are published with
    `backend/scripts/publish_run.py`, which checks model version, stored backtests, rules
-   source quality and data freshness first.
+   source quality and data freshness first. La Liga and Serie A 2026/27 rules are
+   secondary-sourced and were accepted by the project owner (2026-11-04), so they publish
+   without `--accept-secondary-rules` (see `ACCEPTED_SECONDARY_RULES` in
+   `backend/app/database/publishing.py`).
 2. **Always show provenance.** Every forecast carries a `run` block: `model_version`,
    `data_cutoff` (only matches before this were used), `run_at`, `simulation_count`,
    `rules_source_quality`. Show at least the data cutoff and model version next to any
@@ -90,7 +93,7 @@ included, shoot-out in `home_penalties`/`away_penalties`), and `forecast`
 ```bash
 cd backend
 .venv/Scripts/python scripts/backfill_forecasts.py                        # list what is missing
-.venv/Scripts/python scripts/backfill_forecasts.py --save --publish --accept-secondary-rules
+.venv/Scripts/python scripts/backfill_forecasts.py --save --publish
 ```
 
 Refits the model at the end of each completed matchday using only earlier results, simulates the
